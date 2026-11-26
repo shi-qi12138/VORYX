@@ -1,0 +1,4 @@
+add_executable(voryx_core_diagnostics main.cpp)
+target_link_libraries(voryx_core_diagnostics PRIVATE Voryx::core)
+set_target_properties(voryx_core_diagnostics PROPERTIES CXX_EXTENSIONS OFF)
+voryx_enable_warnings(voryx_core_diagnostics)

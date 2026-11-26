@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.25)
+project(VoryxNullBufferExample LANGUAGES CXX)
+find_package(Voryx 0.1.0 EXACT CONFIG REQUIRED COMPONENTS runtime)
+add_executable(null_buffers main.cpp)
+target_link_libraries(null_buffers PRIVATE Voryx::runtime)

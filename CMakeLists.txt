@@ -1,0 +1,182 @@
+cmake_minimum_required(VERSION 3.25)
+
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+    message(FATAL_ERROR "Use an out-of-source build: cmake --preset <name>")
+endif()
+
+project(Voryx VERSION 0.1.0 LANGUAGES CXX)
+include(GNUInstallDirs)
+include(CMakeDependentOption)
+
+option(VORYX_BUILD_TESTS "Build unit and environment verification tests" ${PROJECT_IS_TOP_LEVEL})
+option(VORYX_BUILD_SAMPLES "Build first-party usage samples" ${PROJECT_IS_TOP_LEVEL})
+option(VORYX_ENABLE_QUALITY_CHECKS "Enable developer quality checks" ${PROJECT_IS_TOP_LEVEL})
+option(VORYX_ENABLE_NULL "Build the CPU validation backend" ${PROJECT_IS_TOP_LEVEL})
+option(VORYX_INSTALL "Generate relocatable SDK installation rules" ${PROJECT_IS_TOP_LEVEL})
+option(VORYX_ENABLE_OPENGL "Enable the future OpenGL backend" OFF)
+option(VORYX_ENABLE_VULKAN "Build the Vulkan buffer backend" OFF)
+cmake_dependent_option(VORYX_ENABLE_WIN32_WSI "Build Vulkan Win32 window presentation"
+    ON "WIN32;VORYX_ENABLE_VULKAN" OFF)
+option(VORYX_BUILD_GPU_TESTS "Run explicit Vulkan device tests" OFF)
+option(VORYX_ALLOW_SOFTWARE_VULKAN "Explicitly allow a software ICD in GPU tests" OFF)
+option(VORYX_ENABLE_DX12 "Enable the future DX12 backend" OFF)
+option(VORYX_ENABLE_X11 "Build Vulkan Xlib window presentation" OFF)
+option(VORYX_ENABLE_WAYLAND "Build Vulkan Wayland window presentation" OFF)
+
+if(VORYX_ENABLE_DX12 AND NOT WIN32)
+    message(FATAL_ERROR "DX12 is only a Windows target in VORYX.")
+endif()
+foreach(feature OPENGL DX12)
+    if(VORYX_ENABLE_${feature})
+        message(FATAL_ERROR "${feature} is designed but not implemented yet.")
+    endif()
+endforeach()
+if(VORYX_ENABLE_WAYLAND AND (NOT CMAKE_SYSTEM_NAME STREQUAL "Linux" OR NOT VORYX_ENABLE_VULKAN))
+    message(FATAL_ERROR "VORYX_ENABLE_WAYLAND requires Linux and VORYX_ENABLE_VULKAN=ON.")
+endif()
+if(VORYX_ENABLE_X11)
+    if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux" OR NOT VORYX_ENABLE_VULKAN)
+        message(FATAL_ERROR "VORYX_ENABLE_X11 requires Linux and VORYX_ENABLE_VULKAN=ON.")
+    endif()
+    find_package(X11 REQUIRED)
+endif()
+
+include(cmake/compiler_options.cmake)
+add_subdirectory(src/core)
+add_subdirectory(src/rhi)
+add_subdirectory(src/backends/common)
+if(VORYX_ENABLE_NULL)
+    add_subdirectory(src/backends/null)
+endif()
+if(VORYX_ENABLE_VULKAN)
+    add_subdirectory(src/backends/vulkan)
+endif()
+if(VORYX_BUILD_GPU_TESTS AND NOT VORYX_ENABLE_VULKAN)
+    message(FATAL_ERROR "GPU tests require VORYX_ENABLE_VULKAN=ON")
+endif()
+if(VORYX_BUILD_GPU_TESTS AND NOT VORYX_ENABLE_NULL)
+    message(FATAL_ERROR "Shared GPU contract tests currently require VORYX_ENABLE_NULL=ON")
+endif()
+if(VORYX_BUILD_GPU_TESTS AND WIN32)
+    # 隔离测试进程的第三方隐式叠加层；显式 Khronos 验证层仍保持启用。
+    set(layer_directory "${CMAKE_BINARY_DIR}/test-implicit-layers")
+    file(MAKE_DIRECTORY "${layer_directory}")
+    set(VORYX_GPU_TEST_ENV "VK_IMPLICIT_LAYER_PATH=${layer_directory}")
+endif()
+add_subdirectory(src/runtime)
+if(VORYX_INSTALL)
+    include(cmake/install.cmake)
+endif()
+
+if(VORYX_BUILD_SAMPLES)
+    add_subdirectory(samples/core_diagnostics)
+    if(VORYX_ENABLE_WIN32_WSI)
+        add_subdirectory(samples/win32_clear)
+    endif()
+    if(VORYX_ENABLE_X11)
+        add_subdirectory(samples/xlib_clear)
+    endif()
+    if(VORYX_ENABLE_WAYLAND)
+        add_subdirectory(samples/wayland_clear)
+    endif()
+    if(VORYX_ENABLE_NULL)
+        add_subdirectory(samples/null_buffers)
+    endif()
+endif()
+
+if(VORYX_ENABLE_QUALITY_CHECKS)
+    include(cmake/quality.cmake)
+endif()
+
+if(VORYX_BUILD_TESTS)
+    enable_testing()
+    file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/reports")
+    include(cmake/dependencies.cmake)
+    add_subdirectory(tests/environment)
+    add_subdirectory(tests/unit/core)
+    add_subdirectory(tests/integration/core_headers)
+    add_subdirectory(tests/integration/rhi_headers)
+    if(VORYX_BUILD_GPU_TESTS AND (VORYX_ENABLE_WIN32_WSI OR VORYX_ENABLE_X11 OR VORYX_ENABLE_WAYLAND))
+        add_subdirectory(tests/gpu/vulkan)
+    endif()
+    if(VORYX_ENABLE_WIN32_WSI AND VORYX_BUILD_GPU_TESTS AND VORYX_BUILD_SAMPLES)
+        add_test(NAME integration.win32_clear COMMAND voryx_win32_clear --verify)
+        set_tests_properties(integration.win32_clear PROPERTIES
+            LABELS "gpu_vulkan;wsi_win32" TIMEOUT 90 ENVIRONMENT "${VORYX_GPU_TEST_ENV}")
+    endif()
+    if(VORYX_ENABLE_X11 AND VORYX_BUILD_GPU_TESTS AND VORYX_BUILD_SAMPLES)
+        set(xlib_clear_args --verify)
+        if(VORYX_ALLOW_SOFTWARE_VULKAN)
+            list(APPEND xlib_clear_args --allow-software)
+        endif()
+        add_test(NAME integration.xlib_clear COMMAND voryx_xlib_clear ${xlib_clear_args})
+        set_tests_properties(integration.xlib_clear PROPERTIES
+            LABELS "gpu_vulkan;wsi_x11" TIMEOUT 90)
+    endif()
+    if(VORYX_ENABLE_WAYLAND AND VORYX_BUILD_GPU_TESTS AND VORYX_BUILD_SAMPLES)
+        set(wayland_clear_args --verify)
+        if(VORYX_ALLOW_SOFTWARE_VULKAN)
+            list(APPEND wayland_clear_args --allow-software)
+        endif()
+        add_test(NAME integration.wayland_clear COMMAND voryx_wayland_clear ${wayland_clear_args})
+        set_tests_properties(integration.wayland_clear PROPERTIES
+            LABELS "gpu_vulkan;wsi_wayland" TIMEOUT 90)
+    endif()
+    if(VORYX_ENABLE_NULL)
+        add_subdirectory(tests/contract/rhi)
+    endif()
+    if(VORYX_BUILD_SAMPLES)
+        add_test(NAME integration.core_diagnostics COMMAND voryx_core_diagnostics)
+        set_tests_properties(integration.core_diagnostics PROPERTIES
+            LABELS "integration")
+    endif()
+    if(VORYX_ENABLE_QUALITY_CHECKS)
+        voryx_register_quality_tests()
+    endif()
+    add_test(NAME integration.core_consumer
+        COMMAND "${CMAKE_COMMAND}"
+            "-DSOURCE_ROOT=${PROJECT_SOURCE_DIR}"
+            "-DBINARY_ROOT=${CMAKE_BINARY_DIR}/core-consumer"
+            "-DTEST_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+            "-DCONFIGURATION=${CMAKE_BUILD_TYPE}"
+            "-DNINJA=${CMAKE_MAKE_PROGRAM}"
+            -P "${PROJECT_SOURCE_DIR}/tests/integration/core_consumer/run.cmake")
+    set_tests_properties(integration.core_consumer PROPERTIES
+        LABELS "integration" TIMEOUT 120)
+    if(VORYX_ENABLE_NULL AND VORYX_INSTALL)
+        add_test(NAME integration.installed_sdk
+            COMMAND "${CMAKE_COMMAND}"
+                "-DSOURCE_ROOT=${PROJECT_SOURCE_DIR}"
+                "-DMAIN_BINARY_ROOT=${CMAKE_BINARY_DIR}"
+                "-DSDK_DATA_DIR=${CMAKE_INSTALL_DATADIR}"
+                "-DBINARY_ROOT=${CMAKE_BINARY_DIR}/sdk-integration"
+                "-DTEST_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+                "-DCONFIGURATION=${CMAKE_BUILD_TYPE}"
+                "-DNINJA=${CMAKE_MAKE_PROGRAM}"
+                "-DRUN_GPU=${VORYX_BUILD_GPU_TESTS}"
+                "-DALLOW_SOFTWARE=${VORYX_ALLOW_SOFTWARE_VULKAN}"
+                "-DRUN_WIN32_CLEAR=$<AND:$<BOOL:${VORYX_ENABLE_WIN32_WSI}>,$<BOOL:${VORYX_BUILD_GPU_TESTS}>>"
+                "-DRUN_XLIB_CLEAR=$<AND:$<BOOL:${VORYX_ENABLE_X11}>,$<BOOL:${VORYX_BUILD_GPU_TESTS}>>"
+                "-DRUN_WAYLAND_CLEAR=$<AND:$<BOOL:${VORYX_ENABLE_WAYLAND}>,$<BOOL:${VORYX_BUILD_GPU_TESTS}>>"
+                -P "${PROJECT_SOURCE_DIR}/tests/integration/sdk_consumer/run.cmake")
+        set_tests_properties(integration.installed_sdk PROPERTIES
+            LABELS "integration" TIMEOUT 180)
+        if(VORYX_BUILD_GPU_TESTS)
+            set_tests_properties(integration.installed_sdk PROPERTIES
+                LABELS "integration;gpu_vulkan" ENVIRONMENT "${VORYX_GPU_TEST_ENV}")
+        endif()
+    endif()
+    if(VORYX_ENABLE_NULL AND VORYX_BUILD_SAMPLES)
+        add_test(NAME integration.null_buffers COMMAND voryx_null_buffers)
+        set_tests_properties(integration.null_buffers PROPERTIES LABELS "integration")
+        if(VORYX_BUILD_GPU_TESTS)
+            set(sample_args --vulkan --validation)
+            if(VORYX_ALLOW_SOFTWARE_VULKAN)
+                list(APPEND sample_args --allow-software)
+            endif()
+            add_test(NAME integration.vulkan_buffers COMMAND voryx_null_buffers ${sample_args})
+            set_tests_properties(integration.vulkan_buffers PROPERTIES LABELS "gpu_vulkan"
+                ENVIRONMENT "${VORYX_GPU_TEST_ENV}" TIMEOUT 60)
+        endif()
+    endif()
+endif()

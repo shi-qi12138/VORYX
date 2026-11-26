@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.25)
+project(VoryxWin32Clear LANGUAGES CXX)
+find_package(Voryx 0.1.0 EXACT CONFIG REQUIRED COMPONENTS runtime)
+if(NOT Voryx_WITH_WIN32_WSI)
+    message(FATAL_ERROR "The Win32 clear example requires the Windows Vulkan SDK build")
+endif()
+add_executable(win32_clear main.cpp)
+target_link_libraries(win32_clear PRIVATE Voryx::runtime user32)

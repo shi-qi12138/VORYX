@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.25)
+project(VoryxWaylandClear LANGUAGES C CXX)
+find_package(Voryx 0.1.0 EXACT CONFIG REQUIRED COMPONENTS runtime)
+if(NOT Voryx_WITH_WAYLAND)
+    message(FATAL_ERROR "The Wayland clear example requires a VORYX SDK with Wayland enabled")
+endif()
+include(wayland_sample.cmake)
+voryx_add_wayland_sample(wayland_clear)

@@ -1,0 +1,10 @@
+# 每个公共头使用独立翻译单元，验证不依赖隐含的包含顺序。
+add_library(voryx_core_headers_check OBJECT)
+foreach(header error result log)
+    set(source "${CMAKE_CURRENT_BINARY_DIR}/${header}_header.cpp")
+    file(GENERATE OUTPUT "${source}" CONTENT "#include <voryx/core/${header}.hpp>\n")
+    target_sources(voryx_core_headers_check PRIVATE "${source}")
+endforeach()
+target_link_libraries(voryx_core_headers_check PRIVATE Voryx::core)
+set_target_properties(voryx_core_headers_check PROPERTIES CXX_EXTENSIONS OFF)
+voryx_enable_warnings(voryx_core_headers_check)

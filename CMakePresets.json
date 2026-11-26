@@ -1,0 +1,339 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        "VORYX_BUILD_TESTS": true
+      }
+    },
+    {
+      "name": "windows-debug",
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "cl"
+      }
+    },
+    {
+      "name": "windows-release",
+      "inherits": "windows-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "linux-debug",
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "linux-release",
+      "inherits": "linux-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "windows-vulkan-debug",
+      "inherits": "windows-debug",
+      "cacheVariables": {
+        "VORYX_ENABLE_VULKAN": true,
+        "VORYX_BUILD_GPU_TESTS": true
+      }
+    },
+    {
+      "name": "windows-vulkan-release",
+      "inherits": "windows-release",
+      "cacheVariables": {
+        "VORYX_ENABLE_VULKAN": true,
+        "VORYX_BUILD_GPU_TESTS": true
+      }
+    },
+    {
+      "name": "linux-vulkan-debug",
+      "inherits": "linux-debug",
+      "cacheVariables": {
+        "VORYX_ENABLE_VULKAN": true,
+        "VORYX_BUILD_GPU_TESTS": true
+      }
+    },
+    {
+      "name": "linux-vulkan-release",
+      "inherits": "linux-release",
+      "cacheVariables": {
+        "VORYX_ENABLE_VULKAN": true,
+        "VORYX_BUILD_GPU_TESTS": true
+      }
+    },
+    {
+      "name": "linux-vulkan-software-debug",
+      "inherits": "linux-vulkan-debug",
+      "cacheVariables": {
+        "VORYX_ALLOW_SOFTWARE_VULKAN": true
+      }
+    },
+    {
+      "name": "linux-vulkan-software-release",
+      "inherits": "linux-vulkan-release",
+      "cacheVariables": {
+        "VORYX_ALLOW_SOFTWARE_VULKAN": true
+      }
+    },
+    {
+      "name": "linux-vulkan-x11-debug",
+      "inherits": "linux-vulkan-debug",
+      "cacheVariables": {
+        "VORYX_ENABLE_X11": true
+      }
+    },
+    {
+      "name": "linux-vulkan-x11-software-debug",
+      "inherits": "linux-vulkan-x11-debug",
+      "cacheVariables": {
+        "VORYX_ALLOW_SOFTWARE_VULKAN": true
+      }
+    },
+    {
+      "name": "linux-vulkan-wayland-debug",
+      "inherits": "linux-vulkan-debug",
+      "cacheVariables": {
+        "VORYX_ENABLE_WAYLAND": true
+      }
+    },
+    {
+      "name": "linux-vulkan-wayland-software-debug",
+      "inherits": "linux-vulkan-wayland-debug",
+      "cacheVariables": {
+        "VORYX_ALLOW_SOFTWARE_VULKAN": true
+      }
+    },
+    {
+      "name": "linux-vulkan-x11-release",
+      "inherits": "linux-vulkan-release",
+      "cacheVariables": {
+        "VORYX_ENABLE_X11": true
+      }
+    },
+    {
+      "name": "linux-vulkan-x11-software-release",
+      "inherits": "linux-vulkan-x11-release",
+      "cacheVariables": {
+        "VORYX_ALLOW_SOFTWARE_VULKAN": true
+      }
+    },
+    {
+      "name": "linux-vulkan-wayland-release",
+      "inherits": "linux-vulkan-release",
+      "cacheVariables": {
+        "VORYX_ENABLE_WAYLAND": true
+      }
+    },
+    {
+      "name": "linux-vulkan-wayland-software-release",
+      "inherits": "linux-vulkan-wayland-release",
+      "cacheVariables": {
+        "VORYX_ALLOW_SOFTWARE_VULKAN": true
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows-debug",
+      "configurePreset": "windows-debug"
+    },
+    {
+      "name": "windows-release",
+      "configurePreset": "windows-release"
+    },
+    {
+      "name": "linux-debug",
+      "configurePreset": "linux-debug"
+    },
+    {
+      "name": "linux-release",
+      "configurePreset": "linux-release"
+    },
+    {
+      "name": "windows-vulkan-debug",
+      "configurePreset": "windows-vulkan-debug"
+    },
+    {
+      "name": "windows-vulkan-release",
+      "configurePreset": "windows-vulkan-release"
+    },
+    {
+      "name": "linux-vulkan-debug",
+      "configurePreset": "linux-vulkan-debug"
+    },
+    {
+      "name": "linux-vulkan-release",
+      "configurePreset": "linux-vulkan-release"
+    },
+    {
+      "name": "linux-vulkan-software-debug",
+      "configurePreset": "linux-vulkan-software-debug"
+    },
+    {
+      "name": "linux-vulkan-software-release",
+      "configurePreset": "linux-vulkan-software-release"
+    },
+    {
+      "name": "linux-vulkan-x11-debug",
+      "configurePreset": "linux-vulkan-x11-debug"
+    },
+    {
+      "name": "linux-vulkan-x11-software-debug",
+      "configurePreset": "linux-vulkan-x11-software-debug"
+    },
+    {
+      "name": "linux-vulkan-wayland-debug",
+      "configurePreset": "linux-vulkan-wayland-debug"
+    },
+    {
+      "name": "linux-vulkan-wayland-software-debug",
+      "configurePreset": "linux-vulkan-wayland-software-debug"
+    },
+    {
+      "name": "linux-vulkan-x11-release",
+      "configurePreset": "linux-vulkan-x11-release"
+    },
+    {
+      "name": "linux-vulkan-x11-software-release",
+      "configurePreset": "linux-vulkan-x11-software-release"
+    },
+    {
+      "name": "linux-vulkan-wayland-release",
+      "configurePreset": "linux-vulkan-wayland-release"
+    },
+    {
+      "name": "linux-vulkan-wayland-software-release",
+      "configurePreset": "linux-vulkan-wayland-software-release"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "test-base",
+      "hidden": true,
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "timeout": 60
+      }
+    },
+    {
+      "name": "windows-debug",
+      "inherits": "test-base",
+      "configurePreset": "windows-debug"
+    },
+    {
+      "name": "windows-release",
+      "inherits": "test-base",
+      "configurePreset": "windows-release"
+    },
+    {
+      "name": "linux-debug",
+      "inherits": "test-base",
+      "configurePreset": "linux-debug"
+    },
+    {
+      "name": "linux-release",
+      "inherits": "test-base",
+      "configurePreset": "linux-release"
+    },
+    {
+      "name": "windows-vulkan-debug",
+      "inherits": "test-base",
+      "configurePreset": "windows-vulkan-debug"
+    },
+    {
+      "name": "windows-vulkan-release",
+      "inherits": "test-base",
+      "configurePreset": "windows-vulkan-release"
+    },
+    {
+      "name": "linux-vulkan-debug",
+      "inherits": "test-base",
+      "configurePreset": "linux-vulkan-debug"
+    },
+    {
+      "name": "linux-vulkan-release",
+      "inherits": "test-base",
+      "configurePreset": "linux-vulkan-release"
+    },
+    {
+      "name": "linux-vulkan-software-debug",
+      "inherits": "test-base",
+      "configurePreset": "linux-vulkan-software-debug"
+    },
+    {
+      "name": "linux-vulkan-software-release",
+      "configurePreset": "linux-vulkan-software-release",
+      "inherits": "test-base"
+    },
+    {
+      "name": "linux-vulkan-x11-debug",
+      "inherits": "test-base",
+      "configurePreset": "linux-vulkan-x11-debug"
+    },
+    {
+      "name": "linux-vulkan-x11-software-debug",
+      "inherits": "test-base",
+      "configurePreset": "linux-vulkan-x11-software-debug"
+    },
+    {
+      "name": "linux-vulkan-wayland-debug",
+      "inherits": "test-base",
+      "configurePreset": "linux-vulkan-wayland-debug"
+    },
+    {
+      "name": "linux-vulkan-wayland-software-debug",
+      "inherits": "test-base",
+      "configurePreset": "linux-vulkan-wayland-software-debug"
+    },
+    {
+      "name": "linux-vulkan-x11-release",
+      "inherits": "test-base",
+      "configurePreset": "linux-vulkan-x11-release"
+    },
+    {
+      "name": "linux-vulkan-x11-software-release",
+      "inherits": "test-base",
+      "configurePreset": "linux-vulkan-x11-software-release"
+    },
+    {
+      "name": "linux-vulkan-wayland-release",
+      "inherits": "test-base",
+      "configurePreset": "linux-vulkan-wayland-release"
+    },
+    {
+      "name": "linux-vulkan-wayland-software-release",
+      "inherits": "test-base",
+      "configurePreset": "linux-vulkan-wayland-software-release"
+    }
+  ]
+}

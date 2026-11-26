@@ -1,0 +1,4 @@
+add_executable(voryx_null_buffers main.cpp)
+target_link_libraries(voryx_null_buffers PRIVATE Voryx::runtime)
+set_target_properties(voryx_null_buffers PROPERTIES CXX_EXTENSIONS OFF)
+voryx_enable_warnings(voryx_null_buffers)

@@ -1,0 +1,15 @@
+# Win32 Vulkan 清屏示例
+
+示例使用 VORYX 公共 C++ API 把一个宿主 Win32 窗口交给 Vulkan 清屏和呈现。正常运行可手动缩放、最小化、恢复和关闭。`--verify` 运行有限帧的自动化场景并启用验证层。安装包附带可独立编译的源码和 CMakeLists。
+
+构建、使用和结果契约见 [Win32 清屏指南](../../docs/win32-clear.md)。
+
+传入 `--triangle` 可显示彩色三角形。自动验收也会在缩放和恢复后绘制。 [三角形接入指南](../../docs/vulkan-triangle.md)
+
+传入 `--texture` 可显示四色纹理矩形。 [纹理接入指南](../../docs/vulkan-texture.md)
+
+传入 `--depth` 可显示两个重叠三角形的遮挡效果。 [深度指南](../../docs/vulkan-depth.md)
+
+传入 `--indexed` 可显示由 4 个顶点与 6 个索引组成的彩色矩形。 [索引指南](../../docs/vulkan-indexed.md)
+
+传入 `--binding` 可查看独立纹理和重复采样器组成的绑定。 [绑定指南](../../docs/vulkan-bindings.md)
