@@ -195,6 +195,11 @@ public:
     CreatePipeline(const GraphicsPipelineDesc &desc,
                    rhi_detail::BindingLayoutStorage *layout) override
     {
+        if (desc.vertexSpirv.empty()) {
+            return rhi_detail::Fail<
+                std::unique_ptr<rhi_detail::PipelineStorage>>(
+                ErrorCode::Unsupported);
+        }
         return Invoke<std::unique_ptr<rhi_detail::PipelineStorage>>(
             "CreateVulkanPipeline", [&]() {
                 constexpr std::array formats{VK_FORMAT_R8G8B8A8_UNORM,

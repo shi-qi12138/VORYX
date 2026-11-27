@@ -1,6 +1,6 @@
 # 持续集成与 Vulkan 硬件验收
 
-CI 使用 GitHub Actions。工作流复用本地的 `tools/environment/build.py`，采用同一套 CMake 预设和 CTest 阈值。当前工作区需要接入 GitHub 仓库后才能取得远端运行记录。 [GitHub 执行环境](https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/choose-the-runner-for-a-job)
+CI 使用 GitHub Actions。工作流复用本地的 `tools/environment/build.py`，采用同一套 CMake 预设和 CTest 阈值。首次托管 CI 在初始提交上通过四套 CPU 配置。 [首次运行](https://github.com/shi-qi12138/VORYX/actions/runs/45766123021) [GitHub 执行环境](https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/choose-the-runner-for-a-job)
 
 ## 每次代码变更
 

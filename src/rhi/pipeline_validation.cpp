@@ -158,14 +158,32 @@ bool ValidShader(Words words, std::uint32_t stage, BindingVisibility visibility,
     }
     return entry;
 }
+bool ValidShaderPayloads(const GraphicsPipelineDesc &desc,
+                         std::span<const BindingLayoutEntry> layout) noexcept
+{
+    const bool hasSpirv =
+        !desc.vertexSpirv.empty() || !desc.fragmentSpirv.empty();
+    const bool hasGlsl = !desc.vertexGlsl.empty() || !desc.fragmentGlsl.empty();
+    const auto validSource = [](std::string_view source) {
+        return !source.empty() && source.size() <= 1024 * 1024
+               && source.find('\0') == std::string_view::npos;
+    };
+    return (hasSpirv || hasGlsl)
+           && (!hasSpirv
+               || (ValidShader(desc.vertexSpirv, 0, BindingVisibility::Vertex,
+                               layout)
+                   && ValidShader(desc.fragmentSpirv, 4,
+                                  BindingVisibility::Fragment, layout)))
+           && (!hasGlsl
+               || (validSource(desc.vertexGlsl)
+                   && validSource(desc.fragmentGlsl)));
+}
 } // namespace
 
 bool ValidGraphicsPipeline(const GraphicsPipelineDesc &desc,
                            std::span<const BindingLayoutEntry> layout) noexcept
 {
-    if (!ValidShader(desc.vertexSpirv, 0, BindingVisibility::Vertex, layout)
-        || !ValidShader(desc.fragmentSpirv, 4, BindingVisibility::Fragment,
-                        layout)
+    if (!ValidShaderPayloads(desc, layout)
         || desc.colorFormat > PipelineColorFormat::BGRA8_UNorm
         || desc.cullMode > CullMode::Back
         || desc.frontFace > FrontFace::Clockwise

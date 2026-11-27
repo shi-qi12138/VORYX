@@ -157,6 +157,29 @@
       "cacheVariables": {
         "VORYX_ALLOW_SOFTWARE_VULKAN": true
       }
+    },
+    {
+      "name": "windows-opengl-debug",
+      "inherits": "windows-debug",
+      "cacheVariables": {
+        "VORYX_ENABLE_OPENGL": true,
+        "VORYX_BUILD_OPENGL_TESTS": true
+      }
+    },
+    {
+      "name": "linux-opengl-debug",
+      "inherits": "linux-debug",
+      "cacheVariables": {
+        "VORYX_ENABLE_OPENGL": true,
+        "VORYX_BUILD_OPENGL_TESTS": true
+      }
+    },
+    {
+      "name": "linux-opengl-software-debug",
+      "inherits": "linux-opengl-debug",
+      "cacheVariables": {
+        "VORYX_ALLOW_SOFTWARE_OPENGL": true
+      }
     }
   ],
   "buildPresets": [
@@ -231,6 +254,18 @@
     {
       "name": "linux-vulkan-wayland-software-release",
       "configurePreset": "linux-vulkan-wayland-software-release"
+    },
+    {
+      "name": "windows-opengl-debug",
+      "configurePreset": "windows-opengl-debug"
+    },
+    {
+      "name": "linux-opengl-debug",
+      "configurePreset": "linux-opengl-debug"
+    },
+    {
+      "name": "linux-opengl-software-debug",
+      "configurePreset": "linux-opengl-software-debug"
     }
   ],
   "testPresets": [
@@ -334,6 +369,21 @@
       "name": "linux-vulkan-wayland-software-release",
       "inherits": "test-base",
       "configurePreset": "linux-vulkan-wayland-software-release"
+    },
+    {
+      "name": "windows-opengl-debug",
+      "inherits": "test-base",
+      "configurePreset": "windows-opengl-debug"
+    },
+    {
+      "name": "linux-opengl-debug",
+      "inherits": "test-base",
+      "configurePreset": "linux-opengl-debug"
+    },
+    {
+      "name": "linux-opengl-software-debug",
+      "inherits": "test-base",
+      "configurePreset": "linux-opengl-software-debug"
     }
   ]
 }

@@ -55,12 +55,16 @@ public:
     explicit Pipeline(const GraphicsPipelineDesc &desc)
         : vertex(desc.vertexSpirv.begin(), desc.vertexSpirv.end())
         , fragment(desc.fragmentSpirv.begin(), desc.fragmentSpirv.end())
+        , vertexSource(desc.vertexGlsl)
+        , fragmentSource(desc.fragmentGlsl)
         , attributes(desc.vertexAttributes.begin(), desc.vertexAttributes.end())
         , name(desc.debugName)
         , description(desc)
     {
         description.vertexSpirv = vertex;
         description.fragmentSpirv = fragment;
+        description.vertexGlsl = vertexSource;
+        description.fragmentGlsl = fragmentSource;
         description.vertexAttributes = attributes;
         description.debugName = name;
     }
@@ -68,6 +72,8 @@ public:
 private:
     const std::vector<std::uint32_t> vertex;
     const std::vector<std::uint32_t> fragment;
+    const std::string vertexSource;
+    const std::string fragmentSource;
     const std::vector<VertexAttribute> attributes;
     const std::string name;
     GraphicsPipelineDesc description;

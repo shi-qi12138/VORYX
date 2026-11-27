@@ -1,6 +1,6 @@
 # 文档中心
 
-文档版本：0.1.0-draft.21。最后更新：2026-11-26。项目阶段：Core、缓冲 RHI、Null/Vulkan 缓冲后端和设备工厂已落地，提供可安装 C++ SDK；Win32、X11 与 Wayland 已实现 Vulkan 清屏和固定管线彩色、纹理三角形、深度测试、索引绘制、可复用纹理绑定和显式常量缓冲布局，设备级图形管线、显式顶点布局和离屏 Pass 绘制首批已实现，设备绘制已接入资源绑定、同步窗口帧、窗口双帧异步与 Vulkan 离屏异步提交。Vulkan 窗口已提供显式限时关闭，完整 Runtime 继续推进。接入见 [SDK 文档](sdk-integration.md)。
+文档版本为 0.1.0-draft.24，最后更新于 2026-11-27。项目阶段：Core、缓冲 RHI、Null/Vulkan 缓冲后端和设备工厂已落地，提供可安装 C++ SDK；Win32、X11 与 Wayland 已实现 Vulkan 清屏和固定管线彩色、纹理三角形、深度测试、索引绘制、可复用纹理绑定和显式常量缓冲布局，设备级图形管线、显式顶点布局和离屏 Pass 绘制首批已实现，设备绘制已接入资源绑定、同步窗口帧、窗口双帧异步与 Vulkan 离屏异步提交。Vulkan 窗口已提供显式限时关闭。OpenGL 已接入无窗口缓冲、离屏三角形与像素读回，完整 Runtime 继续推进。接入见 [SDK 文档](sdk-integration.md)。
 
 ## 开发记录与当前状态
 
@@ -49,6 +49,9 @@
 | [xlib-clear.md](xlib-clear.md) | Linux X11 宿主窗口接入、清屏与恢复 |
 | [win32-clear.md](win32-clear.md) | Win32 宿主窗口接入、清屏、恢复与呈现契约 |
 | [vulkan-backend.md](vulkan-backend.md) | Vulkan 构建、设备选择、验证层、调用与当前限制 |
+| [opengl-backend.md](opengl-backend.md) | OpenGL 无窗口上下文、缓冲调用、离屏清屏、三角形和 SDK 配置 |
+| [OpenGL 清屏规格](features/opengl-clear.md) | 附件格式、同步提交、读回和验收条件 |
+| [OpenGL 绘制规格](features/opengl-draw.md) | GLSL 阶段对、顶点布局、裁剪坐标与验收 |
 | [sdk-integration.md](sdk-integration.md) | 安装导出、独立 find_package 接入、迁移与消费验收 |
 | [getting-started.md](getting-started.md) | 使用步骤、典型场景和故障处理；引用 API 定义 |
 | [development.md](development.md) | 开发流程、编码与依赖规则、文档同步要求 |

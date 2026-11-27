@@ -19,8 +19,10 @@ TEST(DeviceFactoryTest, AutoNeverSelectsNull)
     ExpectError(CreateDevice({BackendType::Vulkan, {}}),
                 ErrorCode::BackendNotBuilt);
 #endif
+#if !VORYX_TEST_HAS_OPENGL
     ExpectError(CreateDevice({BackendType::OpenGL, {}}),
                 ErrorCode::BackendNotBuilt);
+#endif
     ExpectError(CreateDevice({static_cast<BackendType>(255), {}}),
                 ErrorCode::InvalidArgument);
 #if defined(_WIN32)
@@ -44,10 +46,10 @@ TEST(DeviceFactoryTest, DeviceCopiesNameAndReportsSyntheticCapabilities)
 
 TEST(DeviceFactoryTest, CreationFailureIdentifiesTheOperation)
 {
-    const auto result = CreateDevice({BackendType::OpenGL, {}});
+    const auto result = CreateDevice({static_cast<BackendType>(255), {}});
     ASSERT_FALSE(result);
     EXPECT_EQ(result.GetError().operation, "CreateDevice");
-    EXPECT_EQ(result.GetError().errorCode, ErrorCode::BackendNotBuilt);
+    EXPECT_EQ(result.GetError().errorCode, ErrorCode::InvalidArgument);
 }
 
 TEST_F(BufferRhiTest, WrongThreadOperationsFailWithoutChangingCommands)

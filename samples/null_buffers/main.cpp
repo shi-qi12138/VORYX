@@ -11,7 +11,7 @@ namespace
 {
 voryx::Result<void> Run(const voryx::DeviceDesc &desc)
 {
-    // 同一段公共 API 流程可选择 CPU 契约后端或真实 Vulkan 设备。
+    // 同一段公共 API 流程可选择 CPU 契约后端或真实图形设备。
     auto created = voryx::CreateDevice(desc);
     if (!created) {
         return voryx::Result<void>::Failure(std::move(created).GetError());
@@ -92,14 +92,17 @@ int main(int argc, char **argv)
         const std::string_view argument = argv[index];
         if (argument == "--vulkan") {
             desc.backend = voryx::BackendType::Vulkan;
+        } else if (argument == "--opengl") {
+            desc.backend = voryx::BackendType::OpenGL;
         } else if (argument == "--validation") {
             desc.enableValidation = true;
         } else if (argument == "--allow-software") {
             desc.allowSoftwareAdapter = true;
         } else {
-            std::fputs("Usage: buffer_sample [--vulkan] [--validation] "
-                       "[--allow-software]\n",
-                       stderr);
+            std::fputs(
+                "Usage: buffer_sample [--vulkan|--opengl] [--validation] "
+                "[--allow-software]\n",
+                stderr);
             return 2;
         }
     }

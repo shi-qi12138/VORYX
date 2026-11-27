@@ -1,6 +1,6 @@
 # 功能规格与里程碑
 
-状态：0.1.0-draft.21。Core、缓冲 RHI、Null/Vulkan 缓冲、低层工厂及安装 SDK 已落地，分别见 [Core](core-api.md)、[缓冲 RHI](rhi-buffer-api.md)、[SDK 接入](sdk-integration.md)。已实现的 GPU 窗口绘制能力按下文列出。完整 RHI 与发布矩阵仍待验收。
+状态为 0.1.0-draft.24。Core、缓冲 RHI、Null/Vulkan 缓冲、低层工厂及安装 SDK 已落地，分别见 [Core](core-api.md)、[缓冲 RHI](rhi-buffer-api.md)、[SDK 接入](sdk-integration.md)。已实现的 GPU 窗口绘制能力按下文列出。完整 RHI 与发布矩阵仍待验收。
 
 Win32、X11 与 Wayland 清屏已完成 F05/F12 的首批功能，包括宿主窗口接入、清屏呈现、缩放和最小化恢复。完整图形与跨平台窗口功能仍按 M2 推进。见 [Win32 规格](features/win32-clear.md) 、[X11 规格](features/xlib-clear.md) 和 [Wayland 规格](features/wayland-clear.md)。
 
@@ -30,7 +30,7 @@ v0.1 的使用入口为 Runtime + RHI。场景级 Renderer、Render Graph 和高
 | F08 | 资源绑定 | 不可变 BindingLayout / BindingSet | 类型、数量、偏移与对齐校验；无隐式覆盖 | M2 |
 | F09 | 命令与同步 | 单图形队列、命令录制、提交、完成查询 | 状态机正确；在途资源不提前释放 | M1/M2 |
 | F10 | 基础绘制 | 清屏、非索引/索引绘制、深度、视口 | 统一 Shader / 资源描述运行共同样例 | M2/M3 |
-| F11 | OpenGL 后端 | CPU 命令流、上下文和状态映射 | 通过全部适用的 v0.1 用例，不泄露 GL 类型 | M3 |
+| F11 | OpenGL 后端 | CPU 命令流、上下文和状态映射，已接入无窗口缓冲、清屏、非索引三角形和同步读回 | 通过全部适用的 v0.1 用例，不泄露 GL 类型 | M3 |
 | F12 | Vulkan 后端 | 资源、提交、交换链、同步实现 | 启用验证时无未解释的错误 | M2 |
 | F13 | DX12 后端 | 资源、描述符、提交、交换链实现 | 启用调试层时无未解释的错误 | M3 |
 | F14 | 生命周期恢复 | 延迟回收、超时、失效句柄、设备丢失 | 能停止提交并清理；不无限重试失败设备 | M1–M3 |

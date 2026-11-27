@@ -122,4 +122,25 @@ TEST_F(BufferRhiTest, PipelineCreatesDepthBlendAndCullStates)
     desc.colorFormat = PipelineColorFormat::BGRA8_UNorm;
     Take(device->Destroy(Take(device->CreateGraphicsPipeline(desc))));
 }
+TEST_F(BufferRhiTest, PipelineValidatesShaderPairsAndUsesItsBackendPayload)
+{
+    auto desc = Description();
+    desc.vertexGlsl =
+        "#version 330 core\nvoid main() { gl_Position = vec4(0); }";
+    ExpectError(device->CreateGraphicsPipeline(desc),
+                ErrorCode::InvalidArgument);
+
+    desc.fragmentGlsl =
+        "#version 330 core\nout vec4 color; void main() { color = vec4(1); }";
+    Take(device->Destroy(Take(device->CreateGraphicsPipeline(desc))));
+    desc.vertexSpirv = {};
+    ExpectError(device->CreateGraphicsPipeline(desc),
+                ErrorCode::InvalidArgument);
+    desc.fragmentSpirv = {};
+#if VORYX_TEST_VULKAN
+    ExpectError(device->CreateGraphicsPipeline(desc), ErrorCode::Unsupported);
+#else
+    Take(device->Destroy(Take(device->CreateGraphicsPipeline(desc))));
+#endif
+}
 } // namespace voryx::test

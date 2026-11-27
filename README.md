@@ -2,7 +2,7 @@
 
 VORYX 是使用 C++20 开发的可嵌入渲染引擎，目标图形后端为 OpenGL、Vulkan 和 Direct3D 12。
 
-首版目标为 Windows 与 Linux：两平台使用 Vulkan/OpenGL，Windows 另提供 DX12；Linux 覆盖 X11 与原生 Wayland。当前提供无窗口 Vulkan 缓冲，以及 Win32、X11 和 Wayland 的清屏、三角形、深度、索引和显式资源绑定示例。Null 用于 CPU 契约测试。OpenGL 与 DX12 后端处于设计阶段。 [跨平台设计](docs/cross-platform.md)
+首版目标为 Windows 与 Linux：两平台使用 Vulkan/OpenGL，Windows 另提供 DX12；Linux 覆盖 X11 与原生 Wayland。当前提供无窗口 Vulkan 缓冲，以及 Win32、X11 和 Wayland 的清屏、三角形、深度、索引和显式资源绑定示例。Null 用于 CPU 契约测试。OpenGL 已提供无窗口缓冲复制、离屏三角形和像素读回，DX12 后端处于设计阶段。 [跨平台设计](docs/cross-platform.md)
 
 项目主体是可被其他工程接入的 C++ 渲染引擎 SDK，支持安装及 find_package 接入。Win32、X11 与 Wayland 窗口可通过公共 API 清屏、纹理三角形和深度测试。已提供固定彩色布局的索引绘制。可复用纹理绑定、显式多槽布局和设备级管线已交付首批能力，设备离屏 Pass 和绘制命令已交付首批能力，设备绘制支持采样资源和常量缓冲绑定，并可通过 Presenter 输出到窗口。 [窗口帧](docs/window-frame-api.md)命令见 [环境搭建](docs/environment.md)。
 
@@ -20,6 +20,7 @@ VORYX 是使用 C++20 开发的可嵌入渲染引擎，目标图形后端为 Ope
 | 在其他工程中接入安装后的库 | [SDK 接入](docs/sdk-integration.md) |
 | 将 Vulkan 接入宿主窗口 | [Win32 清屏指南](docs/win32-clear.md) / [X11 清屏指南](docs/xlib-clear.md) / [Wayland 清屏指南](docs/wayland-clear.md) |
 | 创建真实 Vulkan 设备与运行缓冲复制 | [Vulkan 后端](docs/vulkan-backend.md) |
+| 使用 OpenGL 无窗口设备、缓冲复制和离屏三角形 | [OpenGL 后端](docs/opengl-backend.md) |
 | 用设备命令绘制和呈现窗口帧，包括双帧异步和限时关闭 | [窗口帧 API](docs/window-frame-api.md) |
 | 异步提交离屏任务，等待并读回结果 | [Vulkan 离屏异步提交](docs/rhi-async-submit.md) |
 | 在设备绘制中绑定采样资源和常量缓冲 | [RHI 设备资源绑定](docs/rhi-binding-api.md) |

@@ -50,11 +50,19 @@ protected:
                 std::fputc('\n', stderr);
             }
         };
+#elif VORYX_TEST_OPENGL
+        desc.backend = BackendType::OpenGL;
+        desc.allowSoftwareAdapter = VORYX_TEST_SOFTWARE != 0;
 #endif
         device = Take(CreateDevice(desc));
 #if VORYX_TEST_VULKAN
         ASSERT_TRUE(device->GetInfo().validationEnabled);
         std::printf("Vulkan device: %s; software=%s\n",
+                    device->GetInfo().name.c_str(),
+                    device->GetInfo().softwareAdapter ? "true" : "false");
+#elif VORYX_TEST_OPENGL
+        ASSERT_EQ(device->GetInfo().backend, BackendType::OpenGL);
+        std::printf("OpenGL device: %s; software=%s\n",
                     device->GetInfo().name.c_str(),
                     device->GetInfo().softwareAdapter ? "true" : "false");
 #endif

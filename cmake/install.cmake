@@ -14,6 +14,9 @@ endif()
 if(VORYX_ENABLE_VULKAN)
     list(APPEND voryx_install_targets voryx_backend_vulkan)
 endif()
+if(VORYX_ENABLE_OPENGL)
+    list(APPEND voryx_install_targets voryx_backend_opengl)
+endif()
 install(TARGETS ${voryx_install_targets}
     EXPORT VoryxTargets
     ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
@@ -41,6 +44,18 @@ if(VORYX_ENABLE_NULL)
     install(FILES "${PROJECT_SOURCE_DIR}/samples/null_buffers/standalone.CMakeLists.txt"
         DESTINATION "${CMAKE_INSTALL_DATADIR}/Voryx/examples/null_buffers"
         RENAME CMakeLists.txt)
+endif()
+if(VORYX_ENABLE_OPENGL)
+    foreach(example opengl_clear opengl_triangle)
+        set(destination "${CMAKE_INSTALL_DATADIR}/Voryx/examples/${example}")
+        install(FILES "${PROJECT_SOURCE_DIR}/samples/${example}/main.cpp"
+            "${PROJECT_SOURCE_DIR}/samples/common/opengl_sample.hpp"
+            DESTINATION "${destination}")
+        install(FILES "${PROJECT_SOURCE_DIR}/samples/${example}/standalone.CMakeLists.txt"
+            DESTINATION "${destination}" RENAME CMakeLists.txt)
+    endforeach()
+    install(FILES "${PROJECT_SOURCE_DIR}/assets/shaders/opengl/triangle_glsl.hpp"
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/Voryx/examples/opengl_triangle")
 endif()
 if(VORYX_ENABLE_WIN32_WSI)
     install(FILES "${PROJECT_SOURCE_DIR}/samples/win32_clear/main.cpp"

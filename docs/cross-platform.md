@@ -1,16 +1,16 @@
 # 跨平台范围与实现边界
 
-状态为 0.1.0-draft.21。Vulkan 设备绘制支持 Win32、X11 与原生 Wayland 的同步窗口帧、双帧异步与 Presenter 限时关闭，Windows 和 Linux 均支持离屏异步提交。Windows 经硬件 Vulkan 验证，Linux 两种窗口系统以 WSLg 软件 Vulkan 验证，原生 Linux 硬件验证继续推进。 [窗口帧](window-frame-api.md) · [环境报告](environment.md)
+状态为 0.1.0-draft.24。Vulkan 设备绘制支持 Win32、X11 与原生 Wayland 的同步窗口帧、双帧异步与 Presenter 限时关闭，Windows 和 Linux 均支持离屏异步提交。Windows 经硬件 Vulkan 验证，Linux 两种窗口系统以 WSLg 软件 Vulkan 验证，原生 Linux 硬件验证继续推进。 [窗口帧](window-frame-api.md) · [环境报告](environment.md)
 
 ## 1. 首版目标矩阵
 
 | 系统 / 窗口系统 | Vulkan | OpenGL | DX12 | Null |
 | --- | --- | --- | --- | --- |
-| Windows x86-64 / Win32 | 同步与双帧异步 | 计划支持 | 计划支持 | 已实现，无窗口 CPU 验证 |
-| Linux x86-64 / X11（Xlib） | 同步与双帧异步，WSLg 软件验收 | 计划支持 | 不纳入支持 | 已实现，当前为 WSL2 CPU 验证 |
-| Linux x86-64 / 原生 Wayland | 同步与双帧异步，WSLg 软件验收 | 计划支持 | 不纳入支持 | 已实现，当前为 WSL2 CPU 验证 |
+| Windows x86-64 / Win32 | 同步与双帧异步 | 无窗口三角形已验证，窗口呈现待开发 | 计划支持 | 已实现，无窗口 CPU 验证 |
+| Linux x86-64 / X11（Xlib） | 同步与双帧异步，WSLg 软件验收 | 无窗口软件三角形已验证，X11 窗口呈现待开发 | 不纳入支持 | 已实现，当前为 WSL2 CPU 验证 |
+| Linux x86-64 / 原生 Wayland | 同步与双帧异步，WSLg 软件验收 | 无窗口软件三角形已验证，Wayland 窗口呈现待开发 | 不纳入支持 | 已实现，当前为 WSL2 CPU 验证 |
 
-每项计划均须单独验收。Linux 正式支持范围需固定发行版、glibc/标准库、驱动与桌面会话，不能概括为所有 Linux。首版另已提供 Vulkan 无窗口设备与离屏绘制。xcb、ARM64、macOS 和移动平台留待后续。
+每项计划均须单独验收。Linux 正式支持范围需固定发行版、glibc/标准库、驱动与桌面会话，不能概括为所有 Linux。Vulkan 已提供无窗口设备与离屏绘制。OpenGL 在 Windows WGL 的硬件驱动和 Ubuntu WSL 无窗口 EGL 的软件驱动上验证离屏配色三角形和像素读回。xcb、ARM64、macOS 和移动平台留待后续。 [OpenGL 验证](environment.md#26-opengl-离屏三角形证据)
 
 Auto 在 Windows 按 Vulkan → DX12 → OpenGL，Linux 按 Vulkan → OpenGL。Null 不自动回退。Linux 显式请求 DX12 返回 Unsupported，不暗中引入兼容层。
 

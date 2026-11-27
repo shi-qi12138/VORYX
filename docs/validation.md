@@ -67,6 +67,9 @@
 | T50 | F09/F14/F18 | Vulkan 连续异步提交、在途释放、SDK 使用 | 原生 Vulkan 字节与像素读回正确，验证层无错误 | Vulkan / 安装消费 |
 | T51 | F05/F09/F14/F18 | Vulkan 窗口双帧提交和复用 | 连续呈现、令牌验证、切换时安全回收原生资源 | Win32 / X11 / 原生 Wayland / 安装消费 |
 | T52 | F05/F09/F14/F18 | Vulkan 限时关闭与在途交换链重建 | 关闭超时可重试，双次尺寸变化后成功呈现，关闭回收未呈现帧 | CPU 可控完成源 / Win32 / X11 / 原生 Wayland / 安装消费 |
+| T53 | F06/F09/F11/F18 | OpenGL 无窗口缓冲与迁移 SDK | 原生复制与读回、上下文隔离、能力拒绝、安装消费 | Win32 WGL / Linux 无窗口 EGL |
+| T54 | F06/F09/F11/F18 | OpenGL 离屏清屏和像素读回 | 原生颜色附件、重复清除、批次失败恢复、隔离、迁移 SDK 的独立示例逐像素验证 | Win32 WGL / Linux 无窗口 EGL |
+| T55 | F07/F09/F10/F11/F18 | OpenGL GLSL 管线和离屏三角形 | 原生编译链接、错误恢复、顶点偏移和首顶点、视口裁剪与像素方向、迁移 SDK 示例 | Win32 WGL / Linux 无窗口 EGL |
 | T46 | F08/F10/F12/F18 | 迁移 SDK 的纹理、常量变换、索引与深度组合 | 独立构建和真实像素验证通过 | Windows GPU / WSLg 软件 |
 | T44 | F09/F10/F12/F18 | 公开设备绘制的像素验收 | 索引宽度、起点、顶点偏移、裁剪和深度像素正确，安装后可独立调用 | Windows GPU / WSLg 软件 |
 | T42 | F07/F10/F14/F18 | 独立管线和显式顶点布局 | 共享契约与安装消费通过，填充顶点、复用、剔除和混合像素正确 | Null / Windows GPU / WSLg 软件 |
@@ -99,6 +102,6 @@ Vulkan 使用可用的验证层和同步验证；DX12 使用可用的调试层�
 - 发布记录明确尚未支持的功能；不将设计目标展示为当前能力。
 - 根格式配置与完整括号检查通过；自动化套件及预期用例确实执行，必需套件不能空跑或全部跳过。
 
-当前可执行子集：Null 缓冲，以及 Windows 硬件/WSL 软件 Vulkan 缓冲；具体配置证据见环境报告。Win32 Vulkan 清屏与呈现已验收。X11 清屏已完成 WSLg 软件验收。Wayland 清屏已完成 WSLg 软件验收。固定布局 Vulkan 三角形已实现。OpenGL、DX12 与通用图形管线仍待实现。
+当前可执行子集：Null 缓冲，以及 Windows 硬件/WSL 软件 Vulkan 缓冲；具体配置证据见环境报告。Win32 Vulkan 清屏与呈现已验收。X11 清屏已完成 WSLg 软件验收。Wayland 清屏已完成 WSLg 软件验收。固定布局 Vulkan 三角形已实现。OpenGL 支持无窗口缓冲、离屏颜色清除和非索引三角形，完整管线状态与窗口流程继续开发。DX12 仍待实现。 [OpenGL 环境证据](environment.md#26-opengl-离屏三角形证据)
 
 系统/窗口/后端目标矩阵见 [跨平台设计](cross-platform.md)。Windows 和 Ubuntu WSL2 的 CPU/Null、SDK 与原生 GPU 验收分别记录；原生 Linux GPU/WSI 未执行，不能以 WSL CPU 结果标记图形支持。

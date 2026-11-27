@@ -1,6 +1,6 @@
 # 开发环境搭建与复现
 
-状态：截至 2026-11-26 已落地 Core、缓冲 RHI/Null、低层工厂和可安装 SDK，并新增 Vulkan 真实缓冲后端；Win32、X11 与 Wayland 已可清屏、绘制彩色或纹理三角形、验证深度遮挡和使用索引复用顶点，设备离屏 Pass、Draw/DrawIndexed 和同步读回已交付首批能力，设备级绘制已接入采样纹理、独立采样器和常量缓冲。窗口设备帧支持获取、同步提交、呈现和取消。Vulkan 离屏支持异步提交、完成查询、限时等待和在途回收。Vulkan 窗口已支持显式双帧异步提交。Vulkan 窗口支持可重试的显式限时关闭，已配置 GitHub Actions 工作流，远端首次执行待确认。完整 Runtime 继续推进。 [离屏异步提交](rhi-async-submit.md) [窗口帧](window-frame-api.md)接口见 [缓冲 RHI](rhi-buffer-api.md)，安装见 [SDK 接入](sdk-integration.md)。
+截至 2026-11-27，已落地 Core、缓冲 RHI/Null、低层工厂和可安装 SDK，并新增 Vulkan 真实缓冲后端；Win32、X11 与 Wayland 已可清屏、绘制彩色或纹理三角形、验证深度遮挡和使用索引复用顶点，设备离屏 Pass、Draw/DrawIndexed 和同步读回已交付首批能力，设备级绘制已接入采样纹理、独立采样器和常量缓冲。窗口设备帧支持获取、同步提交、呈现和取消。Vulkan 离屏支持异步提交、完成查询、限时等待和在途回收。Vulkan 窗口已支持显式双帧异步提交。Vulkan 窗口支持可重试的显式限时关闭，GitHub Actions 首次 CPU 矩阵已通过。OpenGL 无窗口设备支持缓冲操作、RGBA8 离屏清屏、GLSL 三角形绘制和同步读回。完整 Runtime 继续推进。 [离屏异步提交](rhi-async-submit.md) [窗口帧](window-frame-api.md)接口见 [缓冲 RHI](rhi-buffer-api.md)，安装见 [SDK 接入](sdk-integration.md)。
 
 ## 1. 已验证环境
 
@@ -77,7 +77,7 @@ wsl -d Ubuntu --exec python3 /mnt/d/VORYX/tools/environment/build.py --preset li
 
 ## 4. CMake、依赖与离线缓存
 
-入口由 CMakePresets.json 定义四套默认 CPU 配置及单独 Vulkan 配置，产物分别在 build/<preset>/。Null 默认在顶层构建启用，Vulkan 默认关闭，可按 [Vulkan 指南](vulkan-backend.md) 显式构建。Win32、X11 和 Wayland 可按各自选项构建。OpenGL 与 DX12 仍会拒绝显式启用。
+入口由 CMakePresets.json 定义四套默认 CPU 配置及单独 Vulkan、OpenGL 配置，产物分别在 build/<preset>/。Null 默认在顶层构建启用，Vulkan 默认关闭，可按 [Vulkan 指南](vulkan-backend.md) 显式构建。Win32、X11 和 Wayland 可按各自选项构建。OpenGL 可显式启用，提供无窗口缓冲和离屏三角形，DX12 仍处于设计阶段。 [OpenGL 后端](opengl-backend.md)
 
 GoogleTest 从官方 v1.17.0 归档获取，SHA256：
 
@@ -345,3 +345,61 @@ T52 新增一个可控完成源测试，验证命令包装仍在时返回 Resour
 本地核对了工作流 YAML、预设映射、权限和 Bash 语法，并用可控报告验证空测试、缺失 WSI 或套件、跳过项与不完整报告会使入口失败。GitHub 仓库和专用执行器尚未接入此工作区的验收流程，远端 CI 与原生 Linux 硬件仍待实际运行。 [持续集成指南](ci.md)
 
 构建入口为 `python tools/environment/build.py --preset <预设>`，Linux 可用 `python3`。测试注册清单和汇总分别在 `build/<预设>/reports/ctest-plan.json` 与 `ctest.xml`，初轮 Windows Vulkan Release 超时见 `build/ci-release-windows.log`，复跑见 `build/ci-release-windows-retry.log`。
+
+## 24. OpenGL 无窗口缓冲证据
+
+2026-11-26，契约版本为 `0.1.0-draft.22`。以下为本轮最终 Debug 验证，零失败、零跳过。
+
+| 构建配置 | 执行环境 | 通过 |
+| --- | --- | --- |
+| `windows-opengl-debug` | Windows WGL，AMD Radeon(TM) Graphics，硬件 OpenGL | 95/95 |
+| `linux-opengl-software-debug` | Ubuntu WSL，EGL 无窗口平台，llvmpipe (LLVM 21.1.8, 256 bits)，软件 OpenGL | 95/95 |
+| `windows-vulkan-debug` | Windows Win32 硬件 Vulkan 回归 | 118/118 |
+
+T53 在两平台实测 `glBufferSubData` 上传、`glCopyBufferSubData` 复制和 `glGetBufferSubData` 读回，复用缓冲状态、范围校验、连续覆盖写入与错误恢复。两个设备同时存在时，销毁一个设备不会影响另一个设备的读回。迁移安装 SDK 后另通过 `find_package` 构建独立用户程序，并运行同样的 OpenGL 字节验证。
+
+Linux 本机补装 `libegl-dev` 1.7.0-3。软件验证在 `DISPLAY` 和 `WAYLAND_DISPLAY` 均未设置且 `LIBGL_ALWAYS_SOFTWARE=1` 的环境执行。Windows 首轮的括号检查将两个只用于 EGL 的字段标为未使用，按平台拆分后完整复跑通过。
+
+汇总及注册计划存放于各预设的 `build/<preset>/reports/`，本轮日志为 `build/opengl-windows-final.log`、`build/opengl-linux.log` 与 `build/opengl-vulkan-regression.log`。原生 Linux 硬件、OpenGL 窗口呈现、绘制及 OpenGL Release 待专项验收。 [OpenGL 指南](opengl-backend.md)
+
+GitHub Actions 首次托管执行基于初始提交 `b20f860`，Windows/Linux Debug 和 Release 四套 CPU/Null 均已通过。 [首次运行](https://github.com/shi-qi12138/VORYX/actions/runs/45766123021)
+
+## 25. OpenGL 离屏清屏与读回证据
+
+2026-11-27 验证 `0.1.0-draft.23`，以下配置均为 Debug。
+
+| 构建配置 | 执行环境 | 通过 | 失败 | 跳过 |
+| --- | --- | --- | --- | --- |
+| `windows-opengl-debug` | WGL，AMD Radeon(TM) Graphics，硬件 OpenGL | 101/101 | 0 | 0 |
+| `linux-opengl-software-debug` | Ubuntu WSL，无窗口 EGL，llvmpipe (LLVM 21.1.8, 256 bits) | 101/101 | 0 | 0 |
+| `windows-vulkan-debug` | Windows 硬件 Vulkan，Win32 回归 | 118/118 | 0 | 0 |
+
+T54 通过公共 RHI 创建原生颜色附件、转换用途、同步清除和读回。共享测试验证重复清除、整批拒绝后的重试、句柄归属和屏障错误恢复。OpenGL 专项还验证两块 5×3 纹理分别保留各自的颜色和 Alpha，销毁一块后另一块仍可读回。迁移安装前缀后，使用 `find_package` 单独编译并链接 `opengl_clear`，两套 OpenGL 配置都逐像素核对了 64×64 红色附件。
+
+执行入口见下方。Windows 环境首次编译新的独立示例时遇到受限环境下已记录的 MSVC C1902，使用本机正常工具链权限完成完整复验。
+
+```text
+python tools/environment/build.py --preset windows-opengl-debug
+python tools/environment/build.py --preset windows-vulkan-debug
+```
+
+```bash
+unset DISPLAY WAYLAND_DISPLAY
+LIBGL_ALWAYS_SOFTWARE=1 python3 tools/environment/build.py --preset linux-opengl-software-debug
+```
+
+日志分别为 `build/opengl-clear-windows-final.log`、`build/opengl-clear-linux.log` 和 `build/opengl-clear-vulkan.log`。各预设的 `reports/ctest.xml` 记录明细。原生 Linux 硬件、OpenGL Release、Shader 绘制及窗口呈现待专项验收。 [OpenGL 接入](opengl-backend.md)
+
+## 26. OpenGL 离屏三角形证据
+
+2026-11-27 验证 `0.1.0-draft.24`。测试包含格式和完整括号检查，配置均为 Debug。
+
+| 构建配置 | 执行环境 | 通过 | 失败 | 跳过 |
+| --- | --- | --- | --- | --- |
+| `windows-opengl-debug` | Windows WGL，AMD Radeon(TM) Graphics，硬件 OpenGL | 106/106 | 0 | 0 |
+| `linux-opengl-software-debug` | Ubuntu WSL，无窗口 EGL，llvmpipe (LLVM 21.1.8, 256 bits) | 106/106 | 0 | 0 |
+| `windows-vulkan-debug` | Windows 硬件 Vulkan，Win32 与 SPIR-V 回归 | 120/120 | 0 | 0 |
+
+T55 验证驱动编译和链接错误诊断、异常后重新创建管线、顶点数据偏移和非零首顶点、左上角视口和裁剪，以及新 Pass 全图清屏。分数视口导致批次被拒绝时，已提交的像素保持原值。在两套 OpenGL 预设中，测试均从迁移后的 SDK 单独配置、编译并运行 `opengl_triangle`，检查 64×64 图像中三角形内外及垂直方向的像素。另从 Windows 的 `build/sdk/windows-x64-opengl-debug-draft24` 安装前缀独立运行同一示例。
+
+构建命令沿用第 25 节。对应日志为 `build/opengl-draw-windows.log`、`build/opengl-draw-linux.log` 和 `build/opengl-draw-vulkan.log`，各预设的 `reports/ctest.xml` 保留测试明细。原生 Linux 硬件、OpenGL Release 和 OpenGL 窗口呈现待专项验收。 [OpenGL 绘制指南](opengl-backend.md#离屏三角形)

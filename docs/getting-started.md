@@ -6,6 +6,8 @@
 
 通过 CreatePresenter 和 GetDevice 可以获取窗口帧并使用设备命令绘制。窗口也可显式选择双帧异步提交，完整可用示例见窗口帧指南。 [窗口帧](window-frame-api.md)
 
+通过 OpenGL 仅使用离屏清屏和读回时，可运行 `voryx_opengl_clear`。安装包也附带独立的 `opengl_clear`，可以直接用 `find_package` 接入。要验证 Shader、顶点和读回方向，运行 `voryx_opengl_triangle` 或安装示例 `opengl_triangle`。 [OpenGL 离屏三角形](opengl-backend.md#离屏三角形) · [OpenGL 离屏清屏](opengl-backend.md#离屏清屏和读回)
+
 ## 1. 当前能做什么
 
 安装 SDK 包含 Core、Null/Vulkan 缓冲和 Vulkan 窗口 Presenter。窗口应用可以运行彩色、纹理、深度和索引示例，也可以用 `--resources` 验证常量缓冲与纹理组合。实际使用步骤和验收范围见对应指南。 [Vulkan 后端](vulkan-backend.md) · [SDK 接入](sdk-integration.md) · [显式绑定布局](vulkan-binding-layout.md)

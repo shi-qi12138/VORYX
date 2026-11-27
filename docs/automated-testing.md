@@ -19,7 +19,7 @@
 | gpu;<backend> | tests/gpu | 有窗口会话与驱动 | 图像、上传、呈现、屏障、在途释放、重建 |
 | fault | 所属套件内 | 可控故障注入 | 内存不足、设备丢失、超时、部分后端创建失败 |
 
-当前可执行标签为 cpu、quality、unit、contract_null、integration、gpu_vulkan；后续增加 OpenGL/DX12/窗口标签。Vulkan 安装消费同时带 integration 与 gpu_vulkan，过滤 CPU 时必须排除整个 gpu_vulkan 标签。
+当前可执行标签为 cpu、quality、unit、contract_null、integration、gpu_vulkan、gpu_opengl 及 Vulkan WSI 标签。DX12 标签随真实用例加入。Vulkan 安装消费同时带 integration 与 gpu_vulkan，过滤 CPU 时必须排除整个 gpu_vulkan 标签。
 
 共享场景参数化执行，后端差异只出现在夹具/适配中；用例逻辑不复制三套。样例可用于 smoke 验证，但不能替代自动断言。
 
@@ -94,6 +94,12 @@ T49 用可控的完成状态复现 Pending、等待超时、队列满后重试�
 T51 扩展现有窗口集成用例与迁移安装 SDK 的窗口样例。在首帧纹理索引绘制后，连续异步清屏并呈现，直到两个帧槽都轮换复用。检查错误令牌、提前释放命令包装，以及留有异步窗口帧时切换入口和析构。 [窗口双帧规格](features/window-async-frames.md)
 
 T52 的可控完成源确定性验证资源忙、有限超时、查询仍可用及再次关闭。窗口与迁移安装 SDK 用例验证两次尺寸变化后用新交换链异步呈现、错误线程拒绝、存在未呈现工作时关闭、关闭后拒绝新工作。 [关闭规格](features/window-shutdown.md)
+
+T53 在 `gpu_opengl` 标签下复用缓冲与命令契约，并检查两个 OpenGL 上下文的设备隔离、销毁顺序以及当前能力边界。迁移后的 SDK 通过 `find_package` 编译并运行 `--opengl` 的字节复制。 [OpenGL 缓冲规格](features/opengl-buffers.md)
+
+T54 在三后端复用附件契约，OpenGL 另验证两张附件的颜色隔离与销毁顺序。仓库内及迁移安装后的 `opengl_clear` 分别清除并检查 4096 个 RGBA8 像素。 [OpenGL 清屏规格](features/opengl-clear.md)
+
+T55 验证 GLSL 编译、链接、失败恢复、非零顶点偏移与首顶点、左上角视口与裁剪，以及批次拒绝后保留颜色。仓库内和迁移安装后的示例使用同一 GLSL 与 C++ 源码验证三角形像素。 [OpenGL 绘制规格](features/opengl-draw.md)
 
 ## 6. 报告与通过条件
 

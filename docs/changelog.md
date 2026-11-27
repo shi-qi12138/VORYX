@@ -1,5 +1,20 @@
 # 文档与接口变更记录
 
+## 0.1.0-draft.24 — 2026-11-27
+
+- `GraphicsPipelineDesc` 增加 GLSL 源码阶段对，OpenGL 可创建不透明 RGBA8 绘制管线，Vulkan 继续接受 SPIR-V。升级时使用同一次构建的头文件与库重编译应用。 [管线接口](rhi-pipeline-api.md)
+- 新增 OpenGL 非索引 TriangleList、顶点缓冲、整数动态视口及裁剪，安装包附带独立三角形像素验证程序。 [功能规格](features/opengl-draw.md) · [调用指南](opengl-backend.md#离屏三角形)
+
+## 0.1.0-draft.23 — 2026-11-27
+
+- OpenGL 支持同步离屏 RGBA8 颜色附件清除和读回，复用现有纹理、Pass、屏障和提交接口。 [功能规格](features/opengl-clear.md) · [调用指南](opengl-backend.md#离屏清屏和读回)
+- 安装包附带独立 `opengl_clear` 示例，迁移后通过 `find_package` 验证 64×64 像素颜色。 [SDK 接入](sdk-integration.md)
+
+## 0.1.0-draft.22 — 2026-11-26
+
+- 添加 Windows WGL 和 Linux 无窗口 EGL 的 OpenGL 3.3 Core 缓冲后端，通过既有设备工厂显式选择。
+- SDK 导出新增 `Voryx_WITH_OPENGL`，安装验证运行同一缓冲复制样例。 [OpenGL 指南](opengl-backend.md) · [功能规格](features/opengl-buffers.md)
+
 ## 0.1.0-draft.21 — 2026-11-26
 
 - Vulkan Presenter 新增 `Shutdown(TimeoutNs)`。调用停止新工作，并在同一预算内等待 GPU 和窗口呈现，超时可重试。虚函数表有变更，升级 SDK 后重新编译应用与自定义 Presenter 实现。

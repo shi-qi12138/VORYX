@@ -9,6 +9,10 @@
 #include <vulkan_factory.hpp>
 #endif
 
+#if VORYX_HAS_OPENGL
+#include <opengl_factory.hpp>
+#endif
+
 #include "device_identity.hpp"
 #include <memory>
 
@@ -34,12 +38,14 @@ Result<std::unique_ptr<IDevice>> CreateDevice(const DeviceDesc &desc) noexcept
     }
 #endif
     const bool useNull = desc.backend == BackendType::Null;
+    const bool useOpenGL = desc.backend == BackendType::OpenGL;
     const bool useVulkan = desc.backend == BackendType::Vulkan
                            || desc.backend == BackendType::Auto;
-    if (!useNull && !useVulkan) {
+    if (!useNull && !useVulkan && !useOpenGL) {
         return Failure(ErrorCode::BackendNotBuilt);
     }
-    if ((useNull && !VORYX_HAS_NULL) || (useVulkan && !VORYX_HAS_VULKAN)) {
+    if ((useNull && !VORYX_HAS_NULL) || (useVulkan && !VORYX_HAS_VULKAN)
+        || (useOpenGL && !VORYX_HAS_OPENGL)) {
         return Failure(ErrorCode::BackendNotBuilt);
     }
     const auto identity = detail::AllocateDeviceIdentity();
@@ -51,6 +57,11 @@ Result<std::unique_ptr<IDevice>> CreateDevice(const DeviceDesc &desc) noexcept
         return detail::CreateNullDevice(identity, desc.debugName);
 #endif
     }
+#if VORYX_HAS_OPENGL
+    if (useOpenGL) {
+        return detail::CreateOpenGLDevice(identity, desc);
+    }
+#endif
 #if VORYX_HAS_VULKAN
     return detail::CreateVulkanDevice(identity, desc);
 #else

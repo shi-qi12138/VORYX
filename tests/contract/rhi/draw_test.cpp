@@ -1,16 +1,14 @@
 #include "triangle_spirv.hpp"
 #include <array>
 #include <limits>
-#include <support/rhi_support.hpp>
-#include <thread>
+#include <support/attachment_support.hpp>
 #include <vector>
 
 namespace voryx::test
 {
 namespace
 {
-constexpr Extent2D size{64, 64};
-using Pixels = std::array<std::byte, 64 * 64 * 4>;
+using namespace attachment;
 constexpr std::array attributes{
     VertexAttribute{0, VertexFormat::Float2, 0},
     VertexAttribute{1, VertexFormat::Float3, 8},
@@ -21,12 +19,6 @@ constexpr std::array<std::array<float, 5>, 4> vertices{{
     {-0.8f, 0.8f, 1, 0, 0},
     {0.8f, 0.8f, 1, 0, 0},
 }};
-TextureHandle Color(IDevice &device)
-{
-    return Take(device.CreateTexture(
-        {size, Format::RGBA8_UNorm,
-         TextureUsage::ColorAttachment | TextureUsage::CopySrc, "test color"}));
-}
 PipelineHandle Pipeline(IDevice &device)
 {
     GraphicsPipelineDesc desc{};
@@ -36,52 +28,12 @@ PipelineHandle Pipeline(IDevice &device)
     desc.vertexAttributes = attributes;
     return Take(device.CreateGraphicsPipeline(desc));
 }
-void Transition(ICommandList &command, TextureHandle color, TextureUse before,
-                TextureUse after)
-{
-    const std::array barriers{TextureBarrier{color, before, after}};
-    Take(command.Barrier(barriers));
-}
-void Pixel(const Pixels &pixels, std::size_t x, std::size_t y,
-           std::array<unsigned, 4> expected)
-{
-    for (std::size_t channel = 0; channel < 4; ++channel) {
-        EXPECT_EQ(std::to_integer<unsigned>(pixels[(y * 64 + x) * 4 + channel]),
-                  expected[channel]);
-    }
-}
 void Dynamic(ICommandList &command)
 {
     Take(command.SetViewport({0, 0, 64, 64, 0, 1}));
     Take(command.SetScissor({0, 0, 64, 64}));
 }
 } // namespace
-
-TEST_F(BufferRhiTest, DevicePassClearsRepeatedAttachmentsAndReadsExactBytes)
-{
-    const auto color = Color(*device);
-    Pixels pixels{};
-    ExpectError(device->ReadTexture(color, pixels), ErrorCode::InvalidState);
-    auto command = Command();
-    Take(command->Begin());
-    Transition(*command, color, TextureUse::Initial,
-               TextureUse::ColorAttachment);
-    Take(command->BeginRenderPass({color, {1, 0, 0, 1}, {}, 1}));
-    Take(command->EndRenderPass());
-    // 同一用途下连续清除，验证 Pass 间的附件同步。
-    Take(command->BeginRenderPass({color, {0, 1, 0, 1}, {}, 1}));
-    Take(command->EndRenderPass());
-    Transition(*command, color, TextureUse::ColorAttachment,
-               TextureUse::CopySrc);
-    Take(command->End());
-    Submit(*command);
-    ExpectError(device->ReadTexture(color, std::span(pixels).first(3)),
-                ErrorCode::InvalidArgument);
-    Take(device->ReadTexture(color, pixels));
-    Pixel(pixels, 0, 0, {0, 255, 0, 255});
-    Pixel(pixels, 63, 63, {0, 255, 0, 255});
-    Take(device->Destroy(color));
-}
 
 TEST_F(BufferRhiTest, DeviceDrawValidatesOrderBoundsAndRecoversWithinPass)
 {
@@ -176,78 +128,6 @@ TEST_F(BufferRhiTest, DeviceDrawPinsAllResourcesUntilResetOrCompletedSubmit)
     Take(device->Destroy(color));
 }
 
-TEST_F(BufferRhiTest, DevicePassBatchFailurePreservesStatesAndClearData)
-{
-    const auto color = Color(*device);
-    auto first = Command();
-    Take(first->Begin());
-    Transition(*first, color, TextureUse::Initial, TextureUse::ColorAttachment);
-    Take(first->BeginRenderPass({color, {1, 0, 0, 1}, {}, 1}));
-    Take(first->EndRenderPass());
-    Transition(*first, color, TextureUse::ColorAttachment, TextureUse::CopySrc);
-    Take(first->End());
-    auto second = Command();
-    Take(second->Begin());
-    Transition(*second, color, TextureUse::Initial,
-               TextureUse::ColorAttachment);
-    Take(second->End());
-    const std::array<ICommandList *, 2> lists{first.get(), second.get()};
-    ExpectError(device->Submit({lists}), ErrorCode::InvalidState);
-    EXPECT_EQ(Take(first->GetState()), CommandState::Executable);
-    Take(second->Reset());
-    Submit(*first);
-    Pixels pixels{};
-    Take(device->ReadTexture(color, pixels));
-    Pixel(pixels, 32, 32, {255, 0, 0, 255});
-    // 同一附件在另一列表继续使用，提交时按整批顺序预测状态。
-    Take(first->Reset());
-    Take(first->Begin());
-    Transition(*first, color, TextureUse::CopySrc, TextureUse::ColorAttachment);
-    Take(first->End());
-    Take(second->Begin());
-    Take(second->BeginRenderPass({color, {0, 0, 1, 1}, {}, 1}));
-    Take(second->EndRenderPass());
-    Transition(*second, color, TextureUse::ColorAttachment,
-               TextureUse::CopySrc);
-    Take(second->End());
-    Take(device->Submit({lists}));
-    Take(device->ReadTexture(color, pixels));
-    Pixel(pixels, 32, 32, {0, 0, 255, 255});
-}
-
-TEST_F(BufferRhiTest,
-       DeviceTexturesValidateDescriptorsOwnershipGenerationAndThread)
-{
-    ExpectError(device->CreateTexture({}), ErrorCode::InvalidArgument);
-    ExpectError(device->CreateTexture(
-                    {{1, 1}, Format::RGBA8_UNorm, TextureUsage::Sampled, {}}),
-                ErrorCode::Unsupported);
-    ExpectError(device->CreateTexture({{1, 1},
-                                       Format::RGBA8_UNorm,
-                                       TextureUsage::ColorAttachment
-                                           | TextureUsage::DepthAttachment,
-                                       {}}),
-                ErrorCode::InvalidArgument);
-    ExpectError(device->CreateTexture(
-                    {{device->GetCapabilities().maxTexture2DSize + 1, 1},
-                     Format::RGBA8_UNorm,
-                     TextureUsage::ColorAttachment,
-                     {}}),
-                ErrorCode::Unsupported);
-    const auto first = Color(*device);
-    auto other = Take(CreateDevice({BackendType::Null, "foreign texture"}));
-    ExpectError(other->Destroy(first), ErrorCode::WrongDevice);
-    std::thread worker([&]() {
-        ExpectError(device->Destroy(first), ErrorCode::WrongThread);
-    });
-    worker.join();
-    Take(device->Destroy(first));
-    const auto second = Color(*device);
-    EXPECT_NE(first, second);
-    ExpectError(device->Destroy(first), ErrorCode::InvalidHandle);
-    Take(device->Destroy(second));
-}
-
 TEST_F(BufferRhiTest,
        DevicePassRejectsDepthMismatchAndReleasesUnfinishedCommands)
 {
@@ -273,27 +153,6 @@ TEST_F(BufferRhiTest,
     device.reset();
     ExpectError(command->EndRenderPass(), ErrorCode::InvalidState);
     command.reset();
-}
-
-TEST_F(BufferRhiTest, DeviceOffscreenAttachmentsRejectPresentState)
-{
-    const auto color = Color(*device);
-    auto command = Command();
-    Take(command->Begin());
-    const std::array invalid{
-        TextureBarrier{color, TextureUse::Initial, TextureUse::Present}};
-    ExpectError(command->Barrier(invalid), ErrorCode::InvalidArgument);
-    Transition(*command, color, TextureUse::Initial,
-               TextureUse::ColorAttachment);
-    Take(command->BeginRenderPass({color, {0, 1, 0, 1}, {}, 1}));
-    Take(command->EndRenderPass());
-    Transition(*command, color, TextureUse::ColorAttachment,
-               TextureUse::CopySrc);
-    Take(command->End());
-    Take(device->Wait(Submit(*command), 0));
-    Pixels pixels{};
-    Take(device->ReadTexture(color, pixels));
-    Pixel(pixels, 32, 32, {0, 255, 0, 255});
 }
 
 #if VORYX_TEST_VULKAN

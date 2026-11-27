@@ -83,6 +83,10 @@ def check_test_plan(preset, plan):
             required.add("integration.xlib_clear")
         elif "-wayland-" in preset:
             required.add("integration.wayland_clear")
+    if "opengl" in preset:
+        required.update({"integration.opengl_buffers", "integration.opengl_clear", "integration.opengl_triangle"})
+        required_labels.add("gpu_opengl")
+        required_suites.append("contract.opengl.")
     missing_tests = sorted(required - names)
     missing_labels = sorted(required_labels - labels)
     missing_suites = [
@@ -118,6 +122,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--preset", required=True, choices=(
         "windows-debug", "windows-release", "linux-debug", "linux-release",
+        "windows-opengl-debug", "linux-opengl-debug", "linux-opengl-software-debug",
         "windows-vulkan-debug", "windows-vulkan-release",
         "linux-vulkan-debug", "linux-vulkan-release", "linux-vulkan-software-debug",
         "linux-vulkan-software-release",

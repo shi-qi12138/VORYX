@@ -1,6 +1,6 @@
 # 在其他工程中使用 VORYX SDK
 
-状态：M1 基础 SDK，提供静态库、公共头和 CMake Config 包。当前真实可执行范围为 Core、缓冲 RHI、Null CPU 后端与可选 Vulkan 缓冲后端；图形绘制尚未实现。这是渲染引擎库的首个可接入子集，样例只是调用者，不是项目主体。
+SDK 提供静态库、公共头和 CMake Config 包。可接入 Core、缓冲 RHI、Null 契约后端及可选的 Vulkan、OpenGL 后端。Vulkan 可执行离屏绘制和已启用窗口系统的呈现。OpenGL 可执行离屏三角形绘制、颜色清除、读回和缓冲操作。
 
 ## 1. 安装 SDK
 
@@ -24,6 +24,8 @@ MSVC 的 Debug/RelWithDebInfo 调试信息嵌入对象文件，静态库安装�
 | 静态库 | lib/；文件后缀随工具链变化 |
 | Config / Version / Targets | lib/cmake/Voryx/ |
 | 可独立构建的 Null 示例 | share/Voryx/examples/null_buffers/ |
+| 可独立构建的 OpenGL 离屏清屏示例 | share/Voryx/examples/opengl_clear/（启用 OpenGL 时） |
+| 可独立构建的 OpenGL 离屏三角形示例 | share/Voryx/examples/opengl_triangle/（启用 OpenGL 时） |
 | 可独立构建的 Win32 Vulkan 清屏示例 | share/Voryx/examples/win32_clear/（启用 Win32 WSI 时） |
 | 可独立构建的 X11 Vulkan 清屏示例 | share/Voryx/examples/xlib_clear/（启用 X11 时） |
 | 可独立构建的 Wayland Vulkan 清屏示例 | share/Voryx/examples/wayland_clear/（启用 Wayland 时） |
@@ -35,6 +37,8 @@ MSVC 的 Debug/RelWithDebInfo 调试信息嵌入对象文件，静态库安装�
 对外链接入口为 Voryx::core、Voryx::rhi_api、Voryx::runtime。Voryx::runtime 自动携带所需的 Core、RHI 和当前已编译后端链接关系，不要手工枚举 .lib/.a。Voryx::detail_* 仅为静态链接依赖导出，不是供应用调用的接口。
 
 安装包不包含私有后端头、源仓库路径、GoogleTest、Python 或 LLVM。Config 通过系统标准的 Threads 查找恢复线程依赖；用户程序不需要 VORYX 的开发检查工具。
+
+Voryx_WITH_OPENGL 表示该安装包含 OpenGL 后端。Linux 静态包会通过 find_dependency 恢复 EGL/OpenGL 链接依赖，Windows 使用系统 OpenGL 库。迁移 SDK 的独立缓冲示例支持 --opengl。 [OpenGL 后端](opengl-backend.md)
 
 Voryx_WITH_VULKAN 表示该安装包含 Vulkan 后端。当前为静态链接，消费这种 SDK 的工程也需可发现的 Vulkan 1.2+ 开发包/loader 链接库；Config 会执行 find_dependency(Vulkan 1.2)。部署机器需要可用 Vulkan loader 和驱动，开启 validation 另需验证层。公共头不包含 SDK，Voryx_WITH_VULKAN=OFF 的 SDK 完全不要求 Vulkan。
 
@@ -69,6 +73,8 @@ Windows 须在与 SDK 相匹配的 x64 MSVC 开发环境执行；Linux 使用相
 安装包中 share/Voryx/examples/null_buffers 包含 main.cpp 和独立 CMakeLists.txt。将该目录复制到应用工作区，通过 CMAKE_PREFIX_PATH 配置、编译并运行 null_buffers。
 
 它会显式创建 Null 设备，上传四个字节，记录状态转换与复制，提交、等待，再读回比较。成功输出 Buffer copy verified. 并返回 0，任意失败返回 1。默认不创建 GPU。Vulkan SDK 构建的程序可传 --vulkan --validation 执行真实缓冲复制；软件 ICD 必须显式传 --allow-software。均不创建窗口，不证明 GPU 绘制。
+
+`Voryx_WITH_OPENGL` 为真时，安装包包含 `opengl_clear`。它创建无窗口设备，经同一公共 RHI 清除离屏附件并验证全部像素。`opengl_triangle` 与 GLSL 源码一并安装，示例绘制非索引三角形后核对像素。独立构建这两个示例时，使用目录中随附的 CMakeLists.txt 和头文件。自动化验收在迁移后的安装目录分别配置、编译并运行两种示例。 [OpenGL 接入与复现命令](opengl-backend.md#离屏清屏和读回)
 
 `Voryx_WITH_WIN32_WSI` 为真时，安装包包含宿主窗口清屏示例。完整 Windows GPU 验收也会将安装前缀迁移后独立配置、编译和运行该示例。见 [窗口接入指南](win32-clear.md)。
 

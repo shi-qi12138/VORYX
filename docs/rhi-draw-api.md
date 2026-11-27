@@ -1,10 +1,14 @@
 # RHI 设备绘制与离屏附件
 
-当前版本为 `0.1.0-draft.17`。设备级绘制使用同一套 IDevice/ICommandList 接口管理附件、管线、顶点、索引、录制和提交。Vulkan 执行真实离屏光栅化，Null 执行资源与命令契约校验及附件清除。窗口呈现沿用 Presenter 入口。 [设备管线](rhi-pipeline-api.md) · [窗口接入](vulkan-triangle.md)
+当前版本为 `0.1.0-draft.24`。设备级绘制使用同一套 IDevice/ICommandList 接口管理附件、管线、顶点、索引、录制和提交。Vulkan 执行真实离屏光栅化，Null 执行资源与命令契约校验及附件清除。OpenGL 支持同步离屏非索引颜色绘制、清屏和像素读回。窗口呈现沿用 Presenter 入口。 [设备管线](rhi-pipeline-api.md) · [窗口接入](vulkan-triangle.md)
 
-## 最小调用流程
+只清除颜色附件时，按顺序执行 `CreateTexture`、颜色用途转换、`BeginRenderPass`、`EndRenderPass`、转为 `CopySrc`、同步提交和 `ReadTexture`。OpenGL 使用空深度句柄，省去管线与几何绑定。 [OpenGL 示例与接入](opengl-backend.md#离屏清屏和读回)
 
-1. 通过 `CreateDevice` 选择 Null 或 Vulkan，通过 `CreateGraphicsPipeline` 创建管线。
+## 绘制调用流程
+
+OpenGL 使用 GLSL 管线、`Draw`、空深度句柄以及整数像素视口。批次包含 OpenGL 暂未支持的操作时，`Submit` 在任何颜色写入之前返回 `Unsupported`。下面包含索引绘制的分支适用于 Null/Vulkan。 [OpenGL 版本及样例](opengl-backend.md#离屏三角形)
+
+1. 通过 `CreateDevice` 选择后端，通过 `CreateGraphicsPipeline` 创建管线。
 2. 创建颜色附件，可选创建同尺寸深度附件。顶点与索引使用已有缓冲接口上传。
 3. Begin 后用 Barrier 转换顶点、索引和附件用途。
 4. BeginRenderPass 后设置管线、顶点、可选索引、视口和裁剪，再调用 Draw 或 DrawIndexed。
@@ -50,18 +54,18 @@ auto begin = command->Begin();
 
 | 输入 | 本批已实现规则 |
 | --- | --- |
-| TextureDesc.extent | 两维均大于零，且不超过 GetCapabilities().maxTexture2DSize，当前上限为 4096 |
+| TextureDesc.extent | 两维均大于零，且不超过 GetCapabilities().maxTexture2DSize，最高为 4096，OpenGL 由驱动上限进一步约束 |
 | 颜色附件 | Format::RGBA8_UNorm，usage 为 ColorAttachment 或 ColorAttachment 与 CopySrc 的组合 |
-| 深度附件 | Format::D32_Float，usage 为 DepthAttachment |
-| 资源数量 | GetCapabilities().maxTextures 当前为 64，原生内存不足可提前失败 |
+| 深度附件 | Format::D32_Float，usage 为 DepthAttachment，适用于 Null/Vulkan |
+| 资源数量 | 使用 GetCapabilities().maxTextures 查询，原生内存不足可提前失败 |
 | 纹理形态 | 单 mip、单层、单采样，不接受初始像素 |
 | ReadTexture | 读取完整 RGBA8，要求 CopySrc 用途和逻辑状态、已提交的有效内容、没有未提交引用，输出长度恰好等于宽×高×4 |
 
-ReadTexture 输出按行紧密排列，每像素为 RGBA 四字节，行顺序对应附件像素坐标，首行为 y=0。函数在 GPU 工作与主机复制完成后返回，不借用调用方输出存储。其他声明的纹理用途与格式组合仍待逐步实现，已知但本批未支持的组合返回 Unsupported。
+ReadTexture 输出按行紧密排列，每像素为 RGBA 四字节，首行对应附件左上角的 y=0。函数在 GPU 工作与主机复制完成后返回，不借用调用方输出存储。其他声明的纹理用途与格式组合仍待逐步实现，已知但本批未支持的组合返回 Unsupported。
 
 ## Pass 与管线
 
-RenderPassDesc 的 color 必填，depth 可选。存在深度时尺寸必须与颜色附件相同。clearColor 的每个分量必须有限，clearDepth 必须有限且位于 [0,1]。每次开始 Pass 都清除完整附件，颜色与深度结果保存。Load/DontCare 选项在后续批次扩展。
+RenderPassDesc 的 color 必填，depth 在 Null/Vulkan 可选，OpenGL 需要空深度句柄。存在深度时尺寸必须与颜色附件相同。clearColor 的每个分量必须有限，clearDepth 必须有限且位于 [0,1]。每次开始 Pass 都清除完整附件，颜色与深度结果保存。Load/DontCare 选项在后续批次扩展。
 
 管线颜色格式须与附件一致。本批 Pass 的深度附件存在性必须与管线的 depthTest 一致，深度使用 D32_Float。每次 BeginRenderPass 清空之前的管线、几何和动态状态，Draw 前必须显式设置 Pipeline、Viewport 与 Scissor。Shader 使用顶点属性时还须设置顶点缓冲。
 
@@ -105,4 +109,4 @@ Vulkan 使用显式图像屏障和外部子通道依赖同步附件转换与连�
 
 设备纹理采样与常量缓冲已通过 SetBindingSet 接入。窗口帧已通过 Presenter 接入同步绘制。异步多帧提交继续推进。 [窗口帧](window-frame-api.md) [设备绑定](rhi-binding-api.md)现有 Presenter 入口继续提供窗口绘制。Null 对绘制调用执行契约校验，真实光栅化结果由 Vulkan 用例读回验证。
 
-本批共享契约覆盖连续附件清除、状态顺序、越界、错误恢复、资源忙、归属、代数、线程、整批原子验证和设备先行销毁。Vulkan 像素用例另外覆盖两种索引宽度、非零起点、有符号顶点偏移、裁剪、非索引绘制、深度遮挡与跨提交复用。安装消费程序在独立工程中通过公共接口完成索引绘制与读回。 [功能规格](features/rhi-draw.md) · [环境证据](environment.md)
+三后端共享附件契约覆盖连续清除、批次失败后的内容保持、纹理归属和 Present 用途拒绝。OpenGL 的安装示例验证全图清屏及非对称三角形像素。Null/Vulkan 的绘制契约覆盖状态顺序、越界、错误恢复、资源忙和设备先行销毁。Vulkan 像素用例另外覆盖两种索引宽度、非零起点、有符号顶点偏移、裁剪、非索引绘制、深度遮挡与跨提交复用。安装消费程序在独立工程中通过公共接口完成索引绘制与读回。 [功能规格](features/rhi-draw.md) · [环境证据](environment.md)

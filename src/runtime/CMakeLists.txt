@@ -3,6 +3,7 @@ add_library(Voryx::runtime ALIAS voryx_runtime)
 target_link_libraries(voryx_runtime PUBLIC Voryx::rhi_api PRIVATE voryx_backend_contract)
 target_compile_definitions(voryx_runtime PRIVATE
     VORYX_HAS_NULL=$<BOOL:${VORYX_ENABLE_NULL}>
+    VORYX_HAS_OPENGL=$<BOOL:${VORYX_ENABLE_OPENGL}>
     VORYX_HAS_VULKAN=$<BOOL:${VORYX_ENABLE_VULKAN}>
     VORYX_HAS_WIN32_PRESENTER=$<BOOL:${VORYX_ENABLE_WIN32_WSI}>
     VORYX_HAS_XLIB_PRESENTER=$<BOOL:${VORYX_ENABLE_X11}>
@@ -14,6 +15,9 @@ if(VORYX_ENABLE_NULL)
 endif()
 if(VORYX_ENABLE_VULKAN)
     target_link_libraries(voryx_runtime PRIVATE voryx_backend_vulkan)
+endif()
+if(VORYX_ENABLE_OPENGL)
+    target_link_libraries(voryx_runtime PRIVATE voryx_backend_opengl)
 endif()
 set_target_properties(voryx_runtime PROPERTIES CXX_EXTENSIONS OFF EXPORT_NAME runtime)
 voryx_enable_warnings(voryx_runtime)

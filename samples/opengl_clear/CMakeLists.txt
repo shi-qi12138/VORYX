@@ -1,0 +1,5 @@
+add_executable(voryx_opengl_clear main.cpp)
+target_include_directories(voryx_opengl_clear PRIVATE "${PROJECT_SOURCE_DIR}/samples/common")
+target_link_libraries(voryx_opengl_clear PRIVATE Voryx::runtime)
+set_target_properties(voryx_opengl_clear PROPERTIES CXX_EXTENSIONS OFF)
+voryx_enable_warnings(voryx_opengl_clear)

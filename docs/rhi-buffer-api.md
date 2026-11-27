@@ -2,11 +2,11 @@
 
 设备级图形管线与离屏绘制的新增接口单独列在专题指南。 [RHI 管线 API](rhi-pipeline-api.md) · [RHI 设备绘制](rhi-draw-api.md)
 
-版本：0.1.0-draft.19。公开文件位于 include/voryx/rhi 与 include/voryx/runtime，命名空间为 voryx。当前包含 Null CPU 后端与可选 Vulkan 1.2 缓冲后端；本页与实际头文件一致，不把计划中的 Texture/绘制/交换链接口混入可用 API。
+版本：0.1.0-draft.22。公开文件位于 include/voryx/rhi 与 include/voryx/runtime，命名空间为 voryx。当前包含 Null CPU 后端、可选 Vulkan 1.2 与 OpenGL 3.3 缓冲后端；本页与实际头文件一致，不把计划中的 Texture/绘制/交换链接口混入可用 API。
 
 ## 1. 创建与线程
 
-CreateDevice(const DeviceDesc&) noexcept 返回 Result<unique_ptr<IDevice>>。DeviceDesc.backend 默认 Auto，debugName 默认为空并在成功创建时复制。显式 BackendType::Null 可创建；编入 Vulkan 时可显式选择 Vulkan，Auto 当前只尝试已编入的 Vulkan，永不选择 Null。OpenGL/Vulkan 或 Windows 上的 DX12 未编译时返回 BackendNotBuilt，Linux DX12 返回 Unsupported，未知枚举返回 InvalidArgument。
+CreateDevice(const DeviceDesc&) noexcept 返回 Result<unique_ptr<IDevice>>。DeviceDesc.backend 默认 Auto，debugName 默认为空并在成功创建时复制。显式 BackendType::Null 可创建；编入 Vulkan 时可显式选择 Vulkan，Auto 当前只尝试已编入的 Vulkan，永不选择 Null。编入 OpenGL 时可显式选择 OpenGL。OpenGL/Vulkan 或 Windows 上的 DX12 未编译时返回 BackendNotBuilt，Linux DX12 返回 Unsupported，未知枚举返回 InvalidArgument。
 
 DeviceDesc 新增的配置均可省略：
 
@@ -26,6 +26,8 @@ Runtime 目前是工厂组装模块，尚无 Runtime::Create、窗口或 Shutdow
 所有可失败的设备和命令操作都在创建设备的线程执行；错误线程返回 WrongThread。设备及命令包装对象也须在此线程析构，违反析构线程契约会终止进程。只读 GetInfo/GetCapabilities 为不可变借用，设备存活期间可读取，不能与销毁并发。
 
 推荐先销毁命令再销毁设备。命令意外晚于设备仍可安全析构，其他操作返回 InvalidState；不允许对已销毁 IDevice 的原始引用继续调用。
+
+OpenGL 的平台依赖、软件设备与验证模式见 [OpenGL 后端](opengl-backend.md)。
 
 ## 2. 能力与句柄
 

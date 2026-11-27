@@ -1,6 +1,6 @@
 # VORYX C++ 框架设计
 
-状态：0.1.0-draft.21。Core、缓冲 RHI、Null/Vulkan 缓冲与低层工厂已有实现，Win32、X11 与 Wayland 清屏和固定布局彩色与纹理三角形及显式资源绑定可用，设备级离屏绘制支持纹理、常量缓冲、索引和深度组合。Vulkan 设备命令支持离屏异步与窗口双帧提交，共享层管理命令完成与资源回收。Vulkan Presenter 提供显式限时关闭。完整 Runtime 和高层模块继续推进。文档索引见 [文档中心](README.md)，可用调用见 [缓冲 RHI](rhi-buffer-api.md)，完整目标见 [接口契约](api-reference.md)。
+状态为 0.1.0-draft.24。Core、缓冲 RHI、Null/Vulkan 缓冲与低层工厂已有实现，Win32、X11 与 Wayland 清屏和固定布局彩色与纹理三角形及显式资源绑定可用，设备级离屏绘制支持纹理、常量缓冲、索引和深度组合。Vulkan 设备命令支持离屏异步与窗口双帧提交，共享层管理命令完成与资源回收。Vulkan Presenter 提供显式限时关闭。OpenGL 支持离屏颜色附件、GLSL 绘制与同步读回。完整 Runtime 和高层模块继续推进。文档索引见 [文档中心](README.md)，可用调用见 [缓冲 RHI](rhi-buffer-api.md)，完整目标见 [接口契约](api-reference.md)。
 
 ## 1. 范围与设计取舍
 
@@ -132,7 +132,7 @@ Renderer 接收创建好的 RHI 设备，不自行隐藏创建第二个设备。
 
 RHI 公共契约不出现某个图形 API 专属枚举。确有原生互操作需求时，设计单独扩展入口并说明状态接管规则，不允许原生对象渗透到 Renderer。
 
-OpenGL 后端采用 CPU 命令流并在上下文所属线程执行；管线和绑定由后端映射为 OpenGL 对象及状态。只缓存和修改引擎拥有的上下文状态，初期不支持与宿主任意交叉调用同一个上下文。
+OpenGL 后端复用共享 RHI 的命令验证和纹理寿命，在设备所属线程激活私有上下文后执行命令。WGL 和 EGL 的获取及恢复位于后端的 `platform/`。`ColorTarget` 管理原生纹理与帧缓冲的创建、清除、读回和回收，按公共 RHI 的左上角坐标整理行顺序。`Pipeline` 管理编译链接后的 GLSL 程序和顶点布局。单次提交使用 `DrawState` 翻译视口和裁剪并管理临时顶点数组对象。共享层经私有后端契约调用，公共接口只携带 Shader 载荷。资源绑定和窗口呈现按后续规格扩展。 [OpenGL 绘制规格](features/opengl-draw.md)
 
 ## 6. 所有权与销毁
 
@@ -166,7 +166,7 @@ Destroy 必须检查资源是否仍被未提交的命令列表引用；第一版
 
 ## 8. Shader 与跨后端一致性
 
-建议以受约束的 HLSL 子集作为主要源码，通过离线工具生成 DXIL、SPIR-V，以及供 OpenGL 使用的 GLSL。DXC 和 SPIRV-Cross 为候选工具，先用最小 Shader 集验证再固定版本。
+建议以受约束的 HLSL 子集作为主要源码，通过离线工具生成 DXIL、SPIR-V，以及供 OpenGL 使用的 GLSL。DXC 和 SPIRV-Cross 为候选工具，先用最小 Shader 集验证再固定版本。当前 OpenGL 首批使用应用提供的 GLSL，Vulkan 使用应用提供的 SPIR-V。成对输入的具体规则见管线指南。 [Shader 输入](rhi-pipeline-api.md#shader-输入)
 
 公共 Shader 元数据统一表达绑定编号、资源类型和缓冲区布局。对 DXIL 与 SPIR-V 反射结果进行一致性检查，不能假设不同目标的布局天然一致。Renderer 只加载已验证产物，不依赖编译器 SDK。
 

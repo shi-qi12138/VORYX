@@ -1,6 +1,6 @@
 # 模块与工程目标说明
 
-更新日期为 2026-11-26，依据当前源码和 CMake 目标整理。模块职责和依赖规则以架构文档为准，本页用于把职责对应到实际代码、构建目标和用户入口。当前交付状态集中见进度看板。 [架构](architecture.md) · [开发进度](project-status.md) · [目录规范](repository-layout.md)
+更新日期为 2026-11-27，依据当前源码和 CMake 目标整理。模块职责和依赖规则以架构文档为准，本页用于把职责对应到实际代码、构建目标和用户入口。当前交付状态集中见进度看板。 [架构](architecture.md) · [开发进度](project-status.md) · [目录规范](repository-layout.md)
 
 ## 核心模块
 
@@ -13,6 +13,7 @@
 | Runtime 组装 | 根据描述创建设备或 Presenter，连接已编译后端，分配设备身份并报告创建错误 | `include/voryx/runtime/`、`src/runtime/` | `voryx_runtime`。对外为 `Voryx::runtime` |
 | 后端创建契约 | 给 Runtime 与后端提供内部工厂声明 | `src/backends/common/` | `voryx_backend_contract` 为内部接口目标 |
 | Null 后端 | CPU 缓冲存储与复制、不可变管线描述存储，为共享契约提供执行环境 | `src/backends/null/` | `voryx_backend_null` |
+| OpenGL 后端 | 无窗口上下文、原生缓冲、GLSL 管线、颜色绘制与读回，复用共享 RHI | `src/backends/opengl/`、`src/backends/opengl/platform/` | `voryx_backend_opengl` |
 | Vulkan 后端 | 真实设备、资源、同步、管线、离屏绘制与窗口呈现，将公共描述映射到 Vulkan | `src/backends/vulkan/` | `voryx_backend_vulkan` |
 
 应用通常链接 `Voryx::runtime`，由导出依赖携带所需静态库。仅使用错误和日志时可链接 `Voryx::core`。`Voryx::detail_*` 由安装包用于解析内部链接依赖。 [SDK 接入](sdk-integration.md)
@@ -102,7 +103,7 @@ Visual Studio 的 `ALL_BUILD`、`ZERO_CHECK`、`INSTALL` 和 `RUN_TESTS` 由 CMa
 
 | 模块或能力 | 当前状态 | 后续条件 |
 | --- | --- | --- |
-| OpenGL 后端 | 待实现 | 接入公共 RHI，并分别验证 Windows、X11 和原生 Wayland |
+| OpenGL 后端 | 无窗口缓冲和非索引离屏绘制已接入 | 补齐索引与资源绑定以及 Win32、X11、原生 Wayland 窗口流程 |
 | DX12 后端 | 待实现 | 接入公共 RHI，完成 Windows 验收 |
 | 通用窗口 Runtime | 已有同步 Presenter 帧路径 | 实现异步多帧、在途资源回收和显式关闭契约 |
 | 高层 Renderer | 规格阶段 | 基础 RHI 与多后端行为达到架构要求 |

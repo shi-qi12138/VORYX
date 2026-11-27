@@ -1,8 +1,34 @@
 # 项目开发日记
 
-整理日期为 2026-11-26。以下条目按已有版本记录和环境报告整理。当前契约版本为 `0.1.0-draft.21`。
+更新于 2026-11-27，当前契约版本为 `0.1.0-draft.24`。
 
 本页记录阶段成果、工程决策、验证与遗留事项。当前进度集中见进度看板，字段和兼容性变化见变更记录。 [开发进度](project-status.md) · [变更记录](changelog.md)
+
+## 2026-11-27 OpenGL 提交整理
+
+- 清屏和三角形样例共用软件驱动参数、设备创建及错误诊断。录制及像素验证仍在各自样例中，安装规则将共用头复制到各示例目录。
+- 开发进度保留当前测试快照，历史矩阵由环境报告维护。 [开发进度](project-status.md) · [环境报告](environment.md)
+
+## 2026-11-27 OpenGL 离屏三角形
+
+- 扩展公共管线描述，OpenGL 编译 GLSL，Vulkan 消费 SPIR-V。共享 RHI 验证载荷、录制与资源寿命，OpenGL 私有实现管理程序与每次提交的顶点数组。 [功能规格](features/opengl-draw.md)
+- 原生绘制用例检查顶点偏移、首顶点、视口、裁剪、清屏状态和 Shader 失败恢复。独立 SDK 示例检查上下方向及三角形内外颜色。Windows 硬件与 WSL 软件 OpenGL 各通过 106 项，Windows Vulkan 回归通过 120 项。 [验证报告](environment.md#26-opengl-离屏三角形证据)
+- OpenGL 下一步先接入 Win32 Presenter，并验证清屏、呈现、缩放与恢复。 [开发进度](project-status.md)
+
+## 2026-11-27 OpenGL 离屏清屏与读回
+
+- 在 OpenGL 私有后端实现原生 RGBA8 纹理、帧缓冲和读回。沿用 RHI 的句柄、用途、Pass 和同步提交契约。 [功能规格](features/opengl-clear.md)
+- 安装包增加独立 `opengl_clear`，从迁移前缀链接 SDK 并校验 4096 个红色像素。Windows 硬件与 WSL 软件 OpenGL 各通过 101 项，Windows Vulkan Debug 回归通过 118 项。 [环境报告](environment.md#25-opengl-离屏清屏与读回证据)
+- 下一批接入 OpenGL Shader 和顶点输入，用离屏三角形验证绘制和像素坐标，再进入窗口呈现。 [开发进度](project-status.md)
+
+## 2026-11-26 OpenGL 无窗口缓冲
+
+涉及契约版本 `draft.22` 和验证 T53。
+
+- 通过 `CreateDevice` 显式选择 OpenGL 3.3 Core。Windows WGL 与 Linux 无窗口 EGL 位于独立私有文件，共用缓冲实现复用现有 RHI 校验。
+- 增加 OpenGL 可选构建、共享缓冲契约、上下文隔离测试及迁移后的 SDK 验证。 [OpenGL 指南](opengl-backend.md)
+- Windows 硬件 OpenGL 与 WSL 无窗口软件 OpenGL 各通过 95 项，Windows Vulkan Debug 通过 118 项。 [验证报告](environment.md#24-opengl-无窗口缓冲证据)
+- OpenGL 窗口清屏、三角形、原生 Linux Vulkan 硬件验收继续推进。 [开发进度](project-status.md)
 
 ## 2026-11-26 CI 配置与 Release 验收
 

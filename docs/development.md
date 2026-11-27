@@ -1,6 +1,6 @@
 # 功能开发与维护规范
 
-状态：Core、缓冲 RHI、Null/Vulkan、窗口绘制、设备级管线首批和安装消费测试已建立。设备离屏绘制命令已交付首批能力。设备绑定、完整窗口 Runtime 与远程 CI 继续推进。当前交付和验证分别见进度看板与环境报告。 [开发进度](project-status.md) · [环境报告](environment.md)
+当前能力、交付边界和已验证环境由进度看板和环境报告维护。 [开发进度](project-status.md) · [环境报告](environment.md)
 
 ## 1. 开发入口
 
@@ -30,7 +30,7 @@
 - 不以全局变量保存设备、当前窗口、当前命令列表或 Renderer。
 - 后端之间不包含头文件。共享实现提取前须证明行为与生命周期一致。
 - 公共接口 target 与后端实现 target 分离，防止链接依赖形成环。
-- 初期构建开关拟定为 VORYX_ENABLE_OPENGL / VORYX_ENABLE_VULKAN / VORYX_ENABLE_DX12 / VORYX_BUILD_SAMPLES / VORYX_BUILD_TESTS；正式命令需在 M1 验证后写入指南。
+- 开发时用仓库共享的 CMake 预设，接入 SDK 时按需显式启用后端。 [构建命令与开关](environment.md)
 - 两平台构建和 WSI 开关按 [跨平台规范](cross-platform.md) 执行；Windows/Linux 都验证公共层和 CPU/Null，DX12 仅 Windows，Linux X11/Wayland 分别测试。
 - 禁止以绝对盘符、大小写容错或 Windows 系统类型实现通用代码；平台系统头只进入相应私有适配。
 

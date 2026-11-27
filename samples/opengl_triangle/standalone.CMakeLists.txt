@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.25)
+project(VoryxOpenGLTriangle LANGUAGES CXX)
+find_package(Voryx 0.1.0 EXACT CONFIG REQUIRED COMPONENTS runtime)
+if(NOT Voryx_WITH_OPENGL)
+    message(FATAL_ERROR "The offscreen triangle example requires an OpenGL-enabled Voryx SDK")
+endif()
+add_executable(opengl_triangle main.cpp)
+target_link_libraries(opengl_triangle PRIVATE Voryx::runtime)

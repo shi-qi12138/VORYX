@@ -61,7 +61,7 @@ struct VertexAttribute
 };
 
 /// 首批管线使用单顶点流、TriangleList、main 入口、单颜色附件与单采样。
-/// Shader 为离线编译的 SPIR-V。有资源时必须指定兼容布局。
+/// 按后端提供 SPIR-V 或 GLSL 阶段对。有资源时必须指定兼容布局。
 struct GraphicsPipelineDesc
 {
     std::span<const std::uint32_t> vertexSpirv;
@@ -77,5 +77,8 @@ struct GraphicsPipelineDesc
     DepthCompare depthCompare = DepthCompare::LessEqual;
     std::string_view debugName;
     DeviceBindingLayoutHandle bindingLayout{};
+    /// OpenGL GLSL 源码，可与 SPIR-V 同时提供。源码在创建调用返回前消费。
+    std::string_view vertexGlsl{};
+    std::string_view fragmentGlsl{};
 };
 } // namespace voryx
