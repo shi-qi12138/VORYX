@@ -13,6 +13,7 @@
 #include <opengl_factory.hpp>
 #endif
 
+#include "backend_selection.hpp"
 #include "device_identity.hpp"
 #include <memory>
 
@@ -25,40 +26,32 @@ Result<std::unique_ptr<IDevice>> Failure(ErrorCode code) noexcept
     return Result<std::unique_ptr<IDevice>>::Failure(
         detail::WithOperation({code, {}, {}, {}}, "CreateDevice"));
 }
-} // namespace
-
-Result<std::unique_ptr<IDevice>> CreateDevice(const DeviceDesc &desc) noexcept
+Result<std::unique_ptr<IDevice>>
+CreateExplicitDevice(const DeviceDesc &desc) noexcept
 {
-    if (desc.backend > BackendType::DX12) {
-        return Failure(ErrorCode::InvalidArgument);
-    }
+    const auto backend = desc.backend;
 #if !VORYX_PLATFORM_WINDOWS
-    if (desc.backend == BackendType::DX12) {
+    if (backend == BackendType::DX12) {
         return Failure(ErrorCode::Unsupported);
     }
 #endif
-    const bool useNull = desc.backend == BackendType::Null;
-    const bool useOpenGL = desc.backend == BackendType::OpenGL;
-    const bool useVulkan = desc.backend == BackendType::Vulkan
-                           || desc.backend == BackendType::Auto;
-    if (!useNull && !useVulkan && !useOpenGL) {
-        return Failure(ErrorCode::BackendNotBuilt);
-    }
-    if ((useNull && !VORYX_HAS_NULL) || (useVulkan && !VORYX_HAS_VULKAN)
-        || (useOpenGL && !VORYX_HAS_OPENGL)) {
+    const bool built = (backend == BackendType::Null && VORYX_HAS_NULL)
+                       || (backend == BackendType::Vulkan && VORYX_HAS_VULKAN)
+                       || (backend == BackendType::OpenGL && VORYX_HAS_OPENGL);
+    if (!built) {
         return Failure(ErrorCode::BackendNotBuilt);
     }
     const auto identity = detail::AllocateDeviceIdentity();
     if (identity == 0) {
         return Failure(ErrorCode::InternalError);
     }
-    if (useNull) {
 #if VORYX_HAS_NULL
+    if (backend == BackendType::Null) {
         return detail::CreateNullDevice(identity, desc.debugName);
-#endif
     }
+#endif
 #if VORYX_HAS_OPENGL
-    if (useOpenGL) {
+    if (backend == BackendType::OpenGL) {
         return detail::CreateOpenGLDevice(identity, desc);
     }
 #endif
@@ -67,5 +60,16 @@ Result<std::unique_ptr<IDevice>> CreateDevice(const DeviceDesc &desc) noexcept
 #else
     return Failure(ErrorCode::BackendNotBuilt);
 #endif
+}
+} // namespace
+
+Result<std::unique_ptr<IDevice>> CreateDevice(const DeviceDesc &desc) noexcept
+{
+    return detail::SelectBackend<std::unique_ptr<IDevice>>(
+        desc.backend, "CreateDevice", [&](BackendType backend) {
+            auto candidate = desc;
+            candidate.backend = backend;
+            return CreateExplicitDevice(candidate);
+        });
 }
 } // namespace voryx

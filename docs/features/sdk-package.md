@@ -15,4 +15,4 @@ VORYX_INSTALL 控制安装，VORYX_ENABLE_NULL 决定是否编入 Null。安装�
 
 ## 验收
 
-integration.installed_sdk 完成安装、复制前缀、导入位置校验，只以安装目录 find_package 并编译运行包内示例；不能包含 src 或回退构建树。该验收证明 SDK 接入链路，不证明 GPU/WSI、部署兼容矩阵或稳定 ABI。
+integration.installed_sdk 每次新建安装与迁移目录，核对后端配置和导入位置，只以迁移后目录执行 find_package 并运行启用后端的示例；不能包含 src 或回退构建树。该验收证明 SDK 接入链路，不证明 GPU/WSI、部署兼容矩阵或稳定 ABI。

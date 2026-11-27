@@ -160,8 +160,11 @@ BufferDevice::CreateSampler(const SamplerDesc &desc) noexcept
         if (!ValidSampler(desc)) {
             return Fail<DeviceSamplerHandle>(ErrorCode::InvalidArgument);
         }
-        if (Full(*state, state->samplers.size(),
-                 state->capabilities.maxSamplers)) {
+        const auto limit = state->capabilities.maxSamplers;
+        if (limit == 0) {
+            return Fail<DeviceSamplerHandle>(ErrorCode::Unsupported);
+        }
+        if (Full(*state, state->samplers.size(), limit)) {
             return Fail<DeviceSamplerHandle>(ErrorCode::OutOfMemory);
         }
         auto created = state->backend->CreateSampler(desc);
@@ -185,8 +188,11 @@ BufferDevice::CreateBindingLayout(const BindingLayoutDesc &desc) noexcept
         if (!ValidBindingLayout(desc)) {
             return Fail<DeviceBindingLayoutHandle>(ErrorCode::InvalidArgument);
         }
-        if (Full(*state, state->bindingLayouts.size(),
-                 state->capabilities.maxBindingLayouts)) {
+        const auto limit = state->capabilities.maxBindingLayouts;
+        if (limit == 0) {
+            return Fail<DeviceBindingLayoutHandle>(ErrorCode::Unsupported);
+        }
+        if (Full(*state, state->bindingLayouts.size(), limit)) {
             return Fail<DeviceBindingLayoutHandle>(ErrorCode::OutOfMemory);
         }
         auto layout = std::make_shared<BindingLayout>();

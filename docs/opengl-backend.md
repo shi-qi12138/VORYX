@@ -65,4 +65,4 @@ cmake --build build/sdk-opengl-clear
 - 颜色附件最多 256 个，单边上限取驱动限制与 4096 的较小值。管线最多 256 个，顶点属性最多 16 个，最大步长 2048 字节。
 - 当前绘制范围为 RGBA8 颜色附件、不透明、无剔除的非索引三角形。深度、绑定布局、活动 Uniform 与采样暂不支持。GLSL 编译或链接失败返回 `InvalidArgument`，驱动诊断保存在 `Error::message`。分数视口、索引绘制和异步提交返回 `Unsupported`。
 - `maxPendingSubmissions` 和 `maxPendingWindowFrames` 为 0，OpenGL 窗口 Presenter 待实现。设置 `enableValidation=true` 返回 `Unsupported`。原生 GL/EGL 错误可查看 `backendCode`。
-- `Auto` 沿用当前 Vulkan 选择流程。使用 OpenGL 时显式填写 `BackendType::OpenGL`。
+- 显式填写 `BackendType::OpenGL` 可固定使用 OpenGL。离屏设备的 `Auto` 会在前序候选不可用时尝试 OpenGL，窗口帧按可用的窗口后端选择。 [设备工厂](rhi-buffer-api.md)

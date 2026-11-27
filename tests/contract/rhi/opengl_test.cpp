@@ -110,4 +110,28 @@ TEST_F(BufferRhiTest, OpenGLColorTargetsKeepIndependentAttachments)
     }
     Take(device->Destroy(blue));
 }
+TEST_F(BufferRhiTest, OpenGLReportsAbsentBindingFeaturesAsUnsupported)
+{
+    const std::array entries{BindingLayoutEntry{0, BindingType::UniformBuffer,
+                                                BindingVisibility::Vertex}};
+    ExpectError(device->CreateSampler({}), ErrorCode::Unsupported);
+    ExpectError(device->CreateBindingLayout({entries}), ErrorCode::Unsupported);
+    ExpectError(device->CreateBindingLayout({}), ErrorCode::InvalidArgument);
+}
+
+#if !VORYX_TEST_HAS_VULKAN
+TEST_F(BufferRhiTest, AutoSelectsOpenGLWithoutVulkan)
+{
+    DeviceDesc desc{BackendType::Auto, "automatic GL selection"};
+    desc.allowSoftwareAdapter = VORYX_TEST_SOFTWARE != 0;
+    auto selected = Take(CreateDevice(desc));
+    EXPECT_EQ(selected->GetInfo().backend, BackendType::OpenGL);
+    desc.enableValidation = true;
+    const auto rejected = CreateDevice(desc);
+    ASSERT_FALSE(rejected);
+    EXPECT_EQ(rejected.GetError().errorCode, ErrorCode::Unsupported);
+    EXPECT_NE(rejected.GetError().message.find("OpenGL=Unsupported"),
+              std::string::npos);
+}
+#endif
 } // namespace voryx::test

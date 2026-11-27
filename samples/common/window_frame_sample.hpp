@@ -36,7 +36,7 @@ void Expect(Result<T> result, ErrorCode code, const char *caseName)
     }
 }
 
-inline FrameInfo Acquire(IPresenter &presenter)
+inline FrameInfo Acquire(IFramePresenter &presenter)
 {
     for (int attempt = 0; attempt < 8; ++attempt) {
         auto result = presenter.AcquireFrame();
@@ -188,7 +188,7 @@ inline void RecordWindowClear(ICommandList &list, TextureHandle color)
     ReturnToPresent(list, color);
 }
 
-inline void VerifyAsyncWindowFrames(IPresenter &presenter, IDevice &device)
+inline void VerifyAsyncWindowFrames(IFramePresenter &presenter, IDevice &device)
 {
     if (device.GetCapabilities().maxPendingWindowFrames < 2) {
         throw std::runtime_error(
@@ -335,7 +335,8 @@ inline bool VerifyWindowFrames(IPresenter &presenter)
     }
 }
 
-inline bool VerifyResizedAsyncFrame(IPresenter &presenter, Extent2D expected)
+inline bool VerifyResizedAsyncFrame(IFramePresenter &presenter,
+                                    Extent2D expected)
 {
     using namespace frame_sample;
     try {
@@ -367,7 +368,7 @@ inline bool VerifyResizedAsyncFrame(IPresenter &presenter, Extent2D expected)
     }
 }
 
-inline bool VerifyWindowShutdown(IPresenter &presenter)
+inline bool VerifyWindowShutdown(IFramePresenter &presenter)
 {
     using namespace frame_sample;
     try {
@@ -417,8 +418,6 @@ inline bool VerifyWindowShutdown(IPresenter &presenter)
         Take(presenter.Shutdown(0));
         Expect(device.IsComplete(token), ErrorCode::InvalidState,
                "submission token after shutdown");
-        Expect(presenter.ClearAndPresent({}), ErrorCode::InvalidState,
-               "legacy present after shutdown");
         return true;
     } catch (const std::exception &error) {
         std::fprintf(stderr, "Window shutdown verification failed: %s\n",
@@ -427,7 +426,16 @@ inline bool VerifyWindowShutdown(IPresenter &presenter)
     }
 }
 
-inline bool VerifyWindowFramePaused(IPresenter &presenter)
+inline bool VerifyWindowShutdown(IPresenter &presenter)
+{
+    if (!VerifyWindowShutdown(static_cast<IFramePresenter &>(presenter))) {
+        return false;
+    }
+    const auto cleared = presenter.ClearAndPresent({});
+    return !cleared && cleared.GetError().errorCode == ErrorCode::InvalidState;
+}
+
+inline bool VerifyWindowFramePaused(IFramePresenter &presenter)
 {
     const auto result = presenter.AcquireFrame();
     return !result

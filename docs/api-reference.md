@@ -1,6 +1,6 @@
 # C++ 接口调用契约
 
-版本为 0.1.0-draft.24。Core 见 [Core API](core-api.md)，已实现的缓冲 RHI/Null/Vulkan/低层工厂见 [缓冲 RHI](rhi-buffer-api.md)，安装见 [SDK 接入](sdk-integration.md)。设备级管线与离屏绘制首批的准确签名与限制见 [管线 API](rhi-pipeline-api.md) 和 [绘制 API](rhi-draw-api.md)。本页为完整渲染目标规格；设备纹理、绘制和绑定的首批范围以专题接口为准。Vulkan Presenter 提供默认同步提交、显式双帧异步提交和 `Shutdown(TimeoutNs)`，Vulkan 设备也支持离屏异步。完整 Runtime 仍以目标规格描述。 [离屏异步提交](rhi-async-submit.md) [绑定 API](rhi-binding-api.md) · [窗口帧 API](window-frame-api.md)
+版本为 0.1.0-draft.25。Core 见 [Core API](core-api.md)，已实现的缓冲 RHI/Null/Vulkan/低层工厂见 [缓冲 RHI](rhi-buffer-api.md)，安装见 [SDK 接入](sdk-integration.md)。设备级管线与离屏绘制首批的准确签名与限制见 [管线 API](rhi-pipeline-api.md) 和 [绘制 API](rhi-draw-api.md)。本页为完整渲染目标规格；设备纹理、绘制和绑定的首批范围以专题接口为准。Vulkan Presenter 提供默认同步提交、显式双帧异步提交和 `Shutdown(TimeoutNs)`，Vulkan 设备也支持离屏异步。完整 Runtime 仍以目标规格描述。 [离屏异步提交](rhi-async-submit.md) [绑定 API](rhi-binding-api.md) · [窗口帧 API](window-frame-api.md)
 
 已实现的窗口清屏签名和错误语义见 [Win32](win32-clear.md) 、[X11](xlib-clear.md) 与 [Wayland](wayland-clear.md)。三角形的实际 Shader 布局、参数和错误语义见 [Vulkan 三角形](vulkan-triangle.md)。实际 RGBA8 上传和采样契约见 [Vulkan 纹理](vulkan-texture.md)。彩色三角形深度测试的实际接口见 [Vulkan 深度测试](vulkan-depth.md)。索引绘制的实际输入与校验见 [Vulkan 索引绘制](vulkan-indexed.md)。已实现的 Presenter 单槽纹理绑定与多槽常量缓冲组合见 [纹理绑定](vulkan-bindings.md) 和 [显式绑定布局](vulkan-binding-layout.md)。当前只有已实现参考页明确列出的签名可直接使用；本页其他方法为后续规格。命名空间统一为 voryx，文中省略此前缀。除非另行注明，参数中的描述和 span 都在调用返回前读取或复制，不保留调用方临时内存。
 
@@ -287,6 +287,6 @@ Idle --AcquireFrame成功--> Acquired --Submit(frame)成功--> Submitted
 
 ## 8. 当前窗口关闭与后续接口
 
-`IPresenter::Shutdown(TimeoutNs)` 是当前可用的 Vulkan 窗口关闭入口，依赖设备与呈现完成状态。关闭开始后拒绝获取、取消、提交及呈现。应用释放命令列表包装后可以反复调用关闭，超时保留关闭中状态。完整 Runtime 的关闭契约仍见第 2 节。 [窗口关闭接口](window-frame-api.md#显式限时关闭)
+`CreateFramePresenter` 返回 `IFramePresenter`，当前支持 Vulkan 窗口帧。原有 `IPresenter` 继承通用接口。`IFramePresenter::Shutdown(TimeoutNs)` 提供窗口关闭入口，依赖设备与呈现完成状态。关闭开始后拒绝获取、取消、提交及呈现。应用释放命令列表包装后可以反复调用关闭，超时保留关闭中状态。完整 Runtime 的关闭契约仍见第 2 节。 [窗口关闭接口](window-frame-api.md#显式限时关闭)
 
 CreateDevice(DeviceDesc) 已提供 Null、Vulkan 和 OpenGL 无窗口入口。显式选择 OpenGL 可使用缓冲操作、RGBA8 离屏清屏、GLSL 非索引三角形绘制和同步读回。参数、状态和能力见 [OpenGL 后端](opengl-backend.md)。其他后端的无窗口执行、高层 Renderer、Render Graph、自定义 Pass、原生互操作、异步上传、动态 BindingSet 和多队列仍未交付。SubmitDesc 已提供 frame 字段，用于 Presenter 的同步或异步窗口帧。 [实际窗口流程](window-frame-api.md)

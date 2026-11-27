@@ -2,11 +2,11 @@
 
 设备级图形管线与离屏绘制的新增接口单独列在专题指南。 [RHI 管线 API](rhi-pipeline-api.md) · [RHI 设备绘制](rhi-draw-api.md)
 
-版本：0.1.0-draft.22。公开文件位于 include/voryx/rhi 与 include/voryx/runtime，命名空间为 voryx。当前包含 Null CPU 后端、可选 Vulkan 1.2 与 OpenGL 3.3 缓冲后端；本页与实际头文件一致，不把计划中的 Texture/绘制/交换链接口混入可用 API。
+版本为 0.1.0-draft.25。公开文件位于 include/voryx/rhi 与 include/voryx/runtime，命名空间为 voryx。当前包含 Null CPU 后端、可选 Vulkan 1.2 与 OpenGL 3.3 缓冲后端；本页与实际头文件一致，不把计划中的 Texture/绘制/交换链接口混入可用 API。
 
 ## 1. 创建与线程
 
-CreateDevice(const DeviceDesc&) noexcept 返回 Result<unique_ptr<IDevice>>。DeviceDesc.backend 默认 Auto，debugName 默认为空并在成功创建时复制。显式 BackendType::Null 可创建；编入 Vulkan 时可显式选择 Vulkan，Auto 当前只尝试已编入的 Vulkan，永不选择 Null。编入 OpenGL 时可显式选择 OpenGL。OpenGL/Vulkan 或 Windows 上的 DX12 未编译时返回 BackendNotBuilt，Linux DX12 返回 Unsupported，未知枚举返回 InvalidArgument。
+CreateDevice(const DeviceDesc&) noexcept 返回 Result<unique_ptr<IDevice>>。`DeviceDesc.backend` 默认为 `Auto`，`debugName` 在成功创建时复制。Windows 按 Vulkan → DX12 → OpenGL 选择，Linux 按 Vulkan → OpenGL 选择。遇到 `BackendNotBuilt`、`BackendUnavailable`、`Unsupported` 或 `SurfaceIncompatible` 才尝试下一候选，全部失败时在 `Error::message` 保留候选诊断。Null 必须显式选择。显式选择未编译后端返回 `BackendNotBuilt`，Linux 上请求 DX12 返回 `Unsupported`，未知枚举返回 `InvalidArgument`。
 
 DeviceDesc 新增的配置均可省略：
 

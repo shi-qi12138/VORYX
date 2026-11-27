@@ -60,9 +60,6 @@ endif()
 if(VORYX_BUILD_GPU_TESTS AND NOT VORYX_ENABLE_VULKAN)
     message(FATAL_ERROR "GPU tests require VORYX_ENABLE_VULKAN=ON")
 endif()
-if(VORYX_BUILD_GPU_TESTS AND NOT VORYX_ENABLE_NULL)
-    message(FATAL_ERROR "Shared GPU contract tests currently require VORYX_ENABLE_NULL=ON")
-endif()
 if(VORYX_BUILD_GPU_TESTS AND WIN32)
     # 隔离测试进程的第三方隐式叠加层；显式 Khronos 验证层仍保持启用。
     set(layer_directory "${CMAKE_BINARY_DIR}/test-implicit-layers")
@@ -89,7 +86,7 @@ if(VORYX_BUILD_SAMPLES)
     if(VORYX_ENABLE_WAYLAND)
         add_subdirectory(samples/wayland_clear)
     endif()
-    if(VORYX_ENABLE_NULL)
+    if(VORYX_ENABLE_NULL OR VORYX_BUILD_OPENGL_TESTS OR VORYX_BUILD_GPU_TESTS)
         add_subdirectory(samples/null_buffers)
     endif()
 endif()
@@ -132,7 +129,7 @@ if(VORYX_BUILD_TESTS)
         set_tests_properties(integration.wayland_clear PROPERTIES
             LABELS "gpu_vulkan;wsi_wayland" TIMEOUT 90)
     endif()
-    if(VORYX_ENABLE_NULL)
+    if(VORYX_ENABLE_NULL OR VORYX_BUILD_OPENGL_TESTS OR VORYX_BUILD_GPU_TESTS)
         add_subdirectory(tests/contract/rhi)
     endif()
     if(VORYX_BUILD_SAMPLES)
@@ -153,12 +150,16 @@ if(VORYX_BUILD_TESTS)
             -P "${PROJECT_SOURCE_DIR}/tests/integration/core_consumer/run.cmake")
     set_tests_properties(integration.core_consumer PROPERTIES
         LABELS "integration" TIMEOUT 120)
-    if(VORYX_ENABLE_NULL AND VORYX_INSTALL)
+    if(VORYX_INSTALL)
         add_test(NAME integration.installed_sdk
             COMMAND "${CMAKE_COMMAND}"
                 "-DSOURCE_ROOT=${PROJECT_SOURCE_DIR}"
                 "-DMAIN_BINARY_ROOT=${CMAKE_BINARY_DIR}"
                 "-DSDK_DATA_DIR=${CMAKE_INSTALL_DATADIR}"
+                "-DSDK_LIB_DIR=${CMAKE_INSTALL_LIBDIR}"
+                "-DEXPECT_NULL=${VORYX_ENABLE_NULL}"
+                "-DEXPECT_OPENGL=${VORYX_ENABLE_OPENGL}"
+                "-DEXPECT_VULKAN=${VORYX_ENABLE_VULKAN}"
                 "-DBINARY_ROOT=${CMAKE_BINARY_DIR}/sdk-integration"
                 "-DTEST_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
                 "-DCONFIGURATION=${CMAKE_BUILD_TYPE}"
@@ -191,9 +192,11 @@ if(VORYX_BUILD_TESTS)
         set_tests_properties(integration.opengl_clear integration.opengl_triangle
             PROPERTIES LABELS "gpu_opengl" TIMEOUT 60)
     endif()
-    if(VORYX_ENABLE_NULL AND VORYX_BUILD_SAMPLES)
-        add_test(NAME integration.null_buffers COMMAND voryx_null_buffers)
-        set_tests_properties(integration.null_buffers PROPERTIES LABELS "integration")
+    if(VORYX_BUILD_SAMPLES)
+        if(VORYX_ENABLE_NULL)
+            add_test(NAME integration.null_buffers COMMAND voryx_null_buffers)
+            set_tests_properties(integration.null_buffers PROPERTIES LABELS "integration")
+        endif()
         if(VORYX_BUILD_OPENGL_TESTS)
             set(opengl_sample_args --opengl)
             if(VORYX_ALLOW_SOFTWARE_OPENGL)

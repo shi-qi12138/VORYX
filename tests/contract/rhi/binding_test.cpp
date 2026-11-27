@@ -56,7 +56,7 @@ TEST_F(BufferRhiTest, DeviceBindingsValidateLayoutShaderAndResourceRanges)
     ExpectError(device->CreateBindingLayout({entries}),
                 ErrorCode::InvalidArgument);
     const auto layout = Take(device->CreateBindingLayout({slots}));
-    auto foreign = Take(CreateDevice({BackendType::Null, "foreign bindings"}));
+    auto foreign = NewDevice("foreign device");
     ExpectError(foreign->CreateGraphicsPipeline(PipelineDesc(layout)),
                 ErrorCode::WrongDevice);
     const std::array<std::byte, 4> pixel{};

@@ -85,7 +85,7 @@ TEST_F(BufferRhiTest, DestroyedHandleCannotAliasReusedSlot)
 
 TEST_F(BufferRhiTest, RejectsForeignAndPreviousDeviceHandles)
 {
-    auto other = Take(CreateDevice({BackendType::Null, {}}));
+    auto other = NewDevice("foreign device");
     const auto handle =
         Take(other->CreateBuffer({4, BufferUsage::CopySrc, {}}));
     ExpectError(device->Destroy(handle), ErrorCode::WrongDevice);

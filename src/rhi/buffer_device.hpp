@@ -57,9 +57,11 @@ public:
     Result<void> CheckCancel(FrameToken frame) const noexcept;
     [[nodiscard]] bool IsFrameAsynchronous() const noexcept;
     void ConsumeFrame() noexcept;
+    Result<void> WaitForFrameSubmissions(TimeoutNs timeoutNs) noexcept;
     void DrainFrameSubmissions() noexcept;
     Result<void> PrepareShutdown(TimeoutNs timeoutNs) noexcept;
     void FinishShutdown() noexcept;
+    [[nodiscard]] bool IsLost() const noexcept;
     void MarkLost() noexcept;
 
 private:

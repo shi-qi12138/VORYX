@@ -403,3 +403,22 @@ LIBGL_ALWAYS_SOFTWARE=1 python3 tools/environment/build.py --preset linux-opengl
 T55 验证驱动编译和链接错误诊断、异常后重新创建管线、顶点数据偏移和非零首顶点、左上角视口和裁剪，以及新 Pass 全图清屏。分数视口导致批次被拒绝时，已提交的像素保持原值。在两套 OpenGL 预设中，测试均从迁移后的 SDK 单独配置、编译并运行 `opengl_triangle`，检查 64×64 图像中三角形内外及垂直方向的像素。另从 Windows 的 `build/sdk/windows-x64-opengl-debug-draft24` 安装前缀独立运行同一示例。
 
 构建命令沿用第 25 节。对应日志为 `build/opengl-draw-windows.log`、`build/opengl-draw-linux.log` 和 `build/opengl-draw-vulkan.log`，各预设的 `reports/ctest.xml` 保留测试明细。原生 Linux 硬件、OpenGL Release 和 OpenGL 窗口呈现待专项验收。 [OpenGL 绘制指南](opengl-backend.md#离屏三角形)
+
+## 27. 架构审查修复验证
+
+2026-11-27 验证 `0.1.0-draft.25`。T56 使用可控完成源复现帧提交退休超时和获取 fence 尚未就绪，确认提交记录与已取得的图像均可在后续调用继续等待。Windows Vulkan 安装示例通过通用 `CreateFramePresenter` 入口实际提交并呈现，再验证限时关闭。T57 检查仅编入 OpenGL 时的自动选择、无采样器或布局能力时的 `Unsupported`、关闭 Null 后的契约用例及独立安装消费。
+
+安装缺件复测在隔离的构建目录保留旧的 `triangle_glsl.hpp` 副本，并让模拟新包漏装该文件。新消费者从空前缀构建并报告缺少头文件，验证旧目录不会使漏装误通过。
+
+| 配置 | 验证结果 |
+| --- | --- |
+| `windows-vulkan-debug` | Win32 硬件 Vulkan 122/122 |
+| `linux-vulkan-wayland-software-debug` | WSLg 原生 Wayland 软件 Vulkan 122/122 |
+| `windows-opengl-debug` | 109 项首轮通过，超时的完整括号检查单独复跑通过，共 110 项 |
+| `linux-opengl-software-debug` | 108 项首轮通过，超时的完整括号与独立 SDK 消费串行复跑通过，共 110 项 |
+| Windows OpenGL Debug 关闭 Null | 65/65，含后端契约与独立 SDK 验收 |
+| `linux-vulkan-x11-software-debug` | X11 窗口样例与两个帧状态回归通过，超时的安装消费单独复跑通过，共 4 项专项 |
+
+关闭 Null 配置可在 MSVC 环境通过 `cmake --preset windows-opengl-debug -B build/gl-no-null -DVORYX_ENABLE_NULL=OFF` 生成，构建后用 `ctest --test-dir build/gl-no-null --output-on-failure` 运行。 [测试入口](automated-testing.md)
+
+构建与测试日志位于 `build/audit-fix-*.log`，包含首轮并行测试及 `*-retry.log` 中的串行复跑结果。Linux Vulkan 窗口结果来自 WSLg。原生 Linux 显卡继续专项验收。

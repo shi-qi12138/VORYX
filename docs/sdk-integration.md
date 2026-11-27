@@ -94,6 +94,6 @@ Windows 须在与 SDK 相匹配的 x64 MSVC 开发环境执行；Linux 使用相
 
 ## 6. 自动化接入验收
 
-integration.installed_sdk 会安装到暂存目录、复制到另一前缀、核对导入库位置、只用新前缀 find_package，再编译运行安装包附带的样例源码。禁止回退到构建树或用户包注册表来制造成功。Vulkan GPU preset 中还会在该独立程序运行 --vulkan --validation，不仅测试 Null 链接。
+`integration.installed_sdk` 每次使用新的安装、迁移和消费者目录。测试核对包声明的后端选项与导入位置，再只用新前缀配置并构建消费者。开启 Null 时运行 CPU 示例，开启 OpenGL/Vulkan GPU 测试时分别执行对应的真实后端流程。关闭 Null 的 SDK 也运行相同的安装消费检查。
 
 发布门槛仍包含：真实后端与 WSI、原生 Linux GPU、支持环境及依赖版本、错误与设备丢失恢复、接口/ABI 兼容策略、对应自动化证据。SDK 接入测试通过不能代替这些渲染验收。

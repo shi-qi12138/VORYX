@@ -90,19 +90,27 @@ void BufferDevice::ConsumeFrame() noexcept
     state->frameSubmission = {};
     state->frameSubmitMode = SubmitMode::Synchronous;
 }
-void BufferDevice::DrainFrameSubmissions() noexcept
+Result<void> BufferDevice::WaitForFrameSubmissions(TimeoutNs timeoutNs) noexcept
 {
     const auto serial = state->lastAsyncFrameSubmission;
     if (serial <= state->completedSubmission) {
-        return;
+        return Result<void>::Success();
     }
+    auto completed = state->WaitForSubmission(serial, timeoutNs);
+    if (completed) {
+        state->lastAsyncFrameSubmission = 0;
+    }
+    return completed;
+}
+void BufferDevice::DrainFrameSubmissions() noexcept
+{
     const auto complete =
-        state->WaitForSubmission(serial, std::numeric_limits<TimeoutNs>::max());
+        WaitForFrameSubmissions(std::numeric_limits<TimeoutNs>::max());
     if (!complete) {
         state->lost = true;
         state->DrainSubmissions();
+        state->lastAsyncFrameSubmission = 0;
     }
-    state->lastAsyncFrameSubmission = 0;
 }
 Result<void> BufferDevice::PrepareShutdown(TimeoutNs timeoutNs) noexcept
 {
@@ -119,6 +127,10 @@ Result<void> BufferDevice::PrepareShutdown(TimeoutNs timeoutNs) noexcept
         state->CompleteThrough(state->lastSubmission);
     }
     return waited;
+}
+bool BufferDevice::IsLost() const noexcept
+{
+    return state->lost;
 }
 void BufferDevice::MarkLost() noexcept
 {

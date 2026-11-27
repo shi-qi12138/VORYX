@@ -1,6 +1,7 @@
 #include "vulkan_presenter.hpp"
 #include "vulkan_depth_target.hpp"
 #include "vulkan_device_texture.hpp"
+#include "vulkan_frame_wait.hpp"
 #include "vulkan_presenter_resources.hpp"
 #include "vulkan_rhi_device.hpp"
 #include "vulkan_triangle.hpp"
@@ -10,7 +11,6 @@
 
 #include <algorithm>
 #include <array>
-#include <chrono>
 #include <cmath>
 #include <limits>
 #include <new>
@@ -359,37 +359,35 @@ struct Swapchain
         slot.pending = false;
     }
 
-    std::uint32_t Acquire(TimeoutNs timeoutNs)
+    std::uint32_t Acquire(const FrameWaitBudget &budget)
     {
-        auto &slot = presentSlots[nextPresentSlot];
-        if (slot.pending) {
-            const auto start = std::chrono::steady_clock::now();
-            WaitForPresentSlot(slot, timeoutNs);
-            const auto elapsed = static_cast<TimeoutNs>(
-                std::chrono::duration_cast<std::chrono::nanoseconds>(
-                    std::chrono::steady_clock::now() - start)
-                    .count());
-            timeoutNs -= std::min(timeoutNs, elapsed);
-        }
-        std::uint32_t index = 0;
-        const auto result =
-            vkAcquireNextImageKHR(context.device, handle, timeoutNs,
-                                  VK_NULL_HANDLE, renderDone, &index);
-        if (result != VK_SUBOPTIMAL_KHR) {
-            Check(result);
-        }
-        acquired = index;
-        acquireSuboptimal = result == VK_SUBOPTIMAL_KHR;
-        renderPending = true;
-        // CPU 等待获取完成后，调用方才可提交对该图像的访问。
-        WaitForRender();
-        return index;
+        return AcquireImageWithinBudget(
+            acquired, budget,
+            [&](TimeoutNs remaining) {
+                WaitForPresentSlot(presentSlots[nextPresentSlot], remaining);
+            },
+            [&](TimeoutNs remaining) {
+                std::uint32_t index = 0;
+                const auto result =
+                    vkAcquireNextImageKHR(context.device, handle, remaining,
+                                          VK_NULL_HANDLE, renderDone, &index);
+                if (result != VK_SUBOPTIMAL_KHR) {
+                    Check(result);
+                }
+                acquireSuboptimal = result == VK_SUBOPTIMAL_KHR;
+                renderPending = true;
+                return index;
+            },
+            [&](TimeoutNs remaining) {
+                WaitForRender(remaining);
+            });
     }
 
-    void WaitForRender()
+    void WaitForRender(TimeoutNs remaining = forever)
     {
-        Check(
-            vkWaitForFences(context.device, 1, &renderDone, VK_TRUE, forever));
+        const auto result =
+            vkWaitForFences(context.device, 1, &renderDone, VK_TRUE, remaining);
+        Check(result == VK_TIMEOUT && remaining == 0 ? VK_NOT_READY : result);
         renderPending = false;
         Check(vkResetFences(context.device, 1, &renderDone));
     }
@@ -412,7 +410,8 @@ struct Swapchain
 
     void Present(ClearColor color, bool drawTriangle)
     {
-        const auto index = Acquire(acquireTimeoutNs);
+        const FrameWaitBudget budget(acquireTimeoutNs);
+        const auto index = Acquire(budget);
         Check(vkResetCommandPool(context.device, pool, 0));
         VkCommandBufferBeginInfo begin{};
         begin.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -491,6 +490,7 @@ struct Swapchain
     VkCommandBuffer command = VK_NULL_HANDLE;
     VkFence renderDone = VK_NULL_HANDLE;
     std::array<PresentSlot, windowFrameSlots> presentSlots{};
+    bool retireRequested = false;
     std::uint32_t nextPresentSlot = 0;
     std::unique_ptr<DepthTarget> depth;
     std::vector<VkImage> images;
@@ -592,10 +592,10 @@ Result<void> Presenter::Shutdown(TimeoutNs timeoutNs) noexcept
     if (context.device == VK_NULL_HANDLE) {
         return Result<void>::Success();
     }
-    const auto start = std::chrono::steady_clock::now();
+    const FrameWaitBudget budget(timeoutNs);
     closing = true;
     auto &rhi = static_cast<rhi_detail::BufferDevice &>(*device);
-    auto drained = rhi.PrepareShutdown(timeoutNs);
+    auto drained = rhi.PrepareShutdown(budget.Remaining());
     if (!drained && drained.GetError().errorCode != ErrorCode::DeviceLost) {
         return Result<void>::Failure(
             detail::WithOperation(std::move(drained).GetError(), operation));
@@ -604,14 +604,7 @@ Result<void> Presenter::Shutdown(TimeoutNs timeoutNs) noexcept
     VkResult retired = VK_SUCCESS;
     if (chain) {
         if (drained) {
-            const auto elapsed = static_cast<TimeoutNs>(
-                std::chrono::duration_cast<std::chrono::nanoseconds>(
-                    std::chrono::steady_clock::now() - start)
-                    .count());
-            const auto remaining =
-                timeoutNs == forever ? forever
-                                     : timeoutNs - std::min(timeoutNs, elapsed);
-            retired = chain->WaitForRetirement(remaining);
+            retired = chain->WaitForRetirement(budget.Remaining());
             if (retired != VK_SUCCESS && retired != VK_ERROR_DEVICE_LOST) {
                 return Result<void>::Failure(NativeError(retired, operation));
             }
@@ -647,7 +640,29 @@ void Presenter::ResetChain() noexcept
     chain.reset();
 }
 
-void Presenter::ResetFailedFrame(VkResult result) noexcept
+Result<void> Presenter::RetireChain(const FrameWaitBudget &budget) noexcept
+{
+    if (!chain) {
+        return Result<void>::Success();
+    }
+    auto &rhi = static_cast<rhi_detail::BufferDevice &>(*device);
+    if (chain->deviceFrames) {
+        auto completed = rhi.WaitForFrameSubmissions(budget.Remaining());
+        if (!completed) {
+            return completed;
+        }
+    }
+    const auto retired = chain->WaitForRetirement(budget.Remaining());
+    if (retired != VK_SUCCESS) {
+        MarkFailure(retired);
+        return Result<void>::Failure(NativeError(retired, "AcquireFrame"));
+    }
+    // 相关 fence 已确认完成，析构路径不会继续等待它们。
+    chain.reset();
+    return Result<void>::Success();
+}
+
+void Presenter::MarkFailure(VkResult result) noexcept
 {
     if (result == VK_ERROR_DEVICE_LOST) {
         static_cast<rhi_detail::BufferDevice &>(*device).MarkLost();
@@ -655,6 +670,11 @@ void Presenter::ResetFailedFrame(VkResult result) noexcept
     if (result == VK_ERROR_DEVICE_LOST || result == VK_ERROR_SURFACE_LOST_KHR) {
         failed = true;
     }
+}
+
+void Presenter::ResetFailedFrame(VkResult result) noexcept
+{
+    MarkFailure(result);
     if ((result != VK_NOT_READY && result != VK_TIMEOUT)
         || (chain && chain->acquired)) {
         ResetChain();
@@ -681,8 +701,13 @@ Result<void> Presenter::PresentFrame(ClearColor color, bool drawTriangle,
     if (std::this_thread::get_id() != owner) {
         return fail(ErrorCode::WrongThread);
     }
+    if (!closing && static_cast<rhi_detail::BufferDevice &>(*device).IsLost()) {
+        return fail(ErrorCode::DeviceLost);
+    }
     if (closing || failed || (drawTriangle && !triangle)
-        || (chain && chain->deviceFrames && chain->acquired)) {
+        || (chain && chain->deviceFrames && chain->acquired
+            && !static_cast<rhi_detail::BufferDevice &>(*device)
+                    .CheckAcquireFrame())) {
         return fail(ErrorCode::InvalidState);
     }
     for (float channel : {color.red, color.green, color.blue, color.alpha}) {
@@ -697,7 +722,7 @@ Result<void> Presenter::PresentFrame(ClearColor color, bool drawTriangle,
             ResetChain();
             return fail(ErrorCode::SurfaceUnavailable);
         }
-        if (!chain || chain->deviceFrames
+        if (!chain || chain->retireRequested || chain->deviceFrames
             || extent.width != chain->requested.width
             || extent.height != chain->requested.height
             || (draw != nullptr && draw != chain->draw)) {
@@ -709,12 +734,15 @@ Result<void> Presenter::PresentFrame(ClearColor color, bool drawTriangle,
         chain->Present(color, drawTriangle);
         return Result<void>::Success();
     } catch (const NativeFailure &error) {
+        MarkFailure(error.result);
         if (error.result == VK_ERROR_OUT_OF_DATE_KHR) {
             ResetChain();
-        } else if (error.result != VK_TIMEOUT) {
+        } else if (error.result != VK_TIMEOUT && error.result != VK_NOT_READY) {
             failed = true;
         }
-        return Result<void>::Failure(NativeError(error.result, operation));
+        return Result<void>::Failure(NativeError(
+            error.result == VK_NOT_READY ? VK_TIMEOUT : error.result,
+            operation));
     } catch (const std::bad_alloc &) {
         return fail(ErrorCode::OutOfMemory);
     }
@@ -731,18 +759,20 @@ Result<T> Presenter::AccessResources(std::string_view operation,
     if (std::this_thread::get_id() != owner) {
         return fail(ErrorCode::WrongThread);
     }
+    if (!closing && static_cast<rhi_detail::BufferDevice &>(*device).IsLost()) {
+        return fail(ErrorCode::DeviceLost);
+    }
     if (closing || failed) {
         return fail(ErrorCode::InvalidState);
     }
     try {
         auto result = action();
         if (!result && result.GetError().errorCode == ErrorCode::DeviceLost) {
-            failed = true;
+            MarkFailure(VK_ERROR_DEVICE_LOST);
         }
         return result;
     } catch (const NativeFailure &error) {
-        failed = error.result == VK_ERROR_DEVICE_LOST
-                 || error.result == VK_ERROR_SURFACE_LOST_KHR;
+        MarkFailure(error.result);
         return Result<T>::Failure(NativeError(error.result, operation));
     } catch (const std::bad_alloc &) {
         return fail(ErrorCode::OutOfMemory);
@@ -761,23 +791,38 @@ Result<FrameInfo> Presenter::AcquireFrame(TimeoutNs timeoutNs) noexcept
         if (timeoutNs == forever) {
             return rhi_detail::Fail<FrameInfo>(ErrorCode::InvalidArgument);
         }
+        const FrameWaitBudget budget(timeoutNs);
         try {
             const auto extent = WindowExtent();
             if (extent.width == 0 || extent.height == 0) {
-                ResetChain();
+                if (chain) {
+                    chain->retireRequested = true;
+                }
                 return rhi_detail::Fail<FrameInfo>(
                     ErrorCode::SurfaceUnavailable);
             }
-            if (!chain || !chain->deviceFrames
+            if (!chain || chain->retireRequested || !chain->deviceFrames
                 || extent.width != chain->requested.width
                 || extent.height != chain->requested.height) {
-                ResetChain();
+                if (chain) {
+                    chain->retireRequested = true;
+                }
+                auto retired = RetireChain(budget);
+                if (!retired) {
+                    auto error = std::move(retired).GetError();
+                    if (timeoutNs == 0
+                        && error.errorCode == ErrorCode::Timeout) {
+                        error.errorCode = ErrorCode::NotReady;
+                    }
+                    return Result<FrameInfo>::Failure(detail::WithOperation(
+                        std::move(error), "AcquireFrame"));
+                }
                 auto next =
                     std::make_unique<Swapchain>(context, extent, nullptr, true);
                 next->Initialize();
                 chain = std::move(next);
             }
-            const auto index = chain->Acquire(timeoutNs);
+            const auto index = chain->Acquire(budget);
             const Extent2D actual{chain->extent.width, chain->extent.height};
             const auto format = chain->imageFormat == VK_FORMAT_B8G8R8A8_UNORM
                                     ? Format::BGRA8_UNorm
@@ -788,16 +833,20 @@ Result<FrameInfo> Presenter::AcquireFrame(TimeoutNs timeoutNs) noexcept
                 chain->presentSlots[chain->nextPresentSlot].ready);
             auto frame = rhi.PublishFrame(actual, format, std::move(image));
             if (!frame) {
-                ResetChain();
+                chain->retireRequested = true;
             }
             return frame;
         } catch (const NativeFailure &error) {
-            ResetFailedFrame(error.result);
+            MarkFailure(error.result);
+            if (chain && error.result != VK_NOT_READY
+                && error.result != VK_TIMEOUT) {
+                chain->retireRequested = true;
+            }
             return Result<FrameInfo>::Failure(
                 NativeError(error.result, "AcquireFrame"));
         } catch (const std::bad_alloc &) {
             if (chain && chain->acquired) {
-                ResetChain();
+                chain->retireRequested = true;
             }
             return rhi_detail::Fail<FrameInfo>(ErrorCode::OutOfMemory);
         }

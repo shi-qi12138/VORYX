@@ -10,6 +10,7 @@
 namespace voryx::vulkan_backend
 {
 struct Swapchain;
+class FrameWaitBudget;
 
 class TriangleDraw;
 class PresenterResources;
@@ -75,6 +76,8 @@ private:
     VkExtent2D WindowExtent() const;
     void DestroySurface() noexcept;
     void ResetChain() noexcept;
+    Result<void> RetireChain(const FrameWaitBudget &budget) noexcept;
+    void MarkFailure(VkResult result) noexcept;
     void ResetFailedFrame(VkResult result) noexcept;
     std::shared_ptr<Context> contextOwner;
     Context &context;

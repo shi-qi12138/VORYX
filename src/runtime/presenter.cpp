@@ -1,5 +1,6 @@
 #include <voryx/runtime/presenter.hpp>
 
+#include "backend_selection.hpp"
 #include "device_identity.hpp"
 
 #include <error_context.hpp>
@@ -11,26 +12,34 @@
 
 namespace voryx
 {
-Result<std::unique_ptr<IPresenter>>
-CreatePresenter(const PresenterDesc &desc) noexcept
+namespace
 {
-    const auto fail = [](ErrorCode code) {
-        return Result<std::unique_ptr<IPresenter>>::Failure(
-            detail::WithOperation({code, {}, {}, {}}, "CreatePresenter"));
+bool ValidWindow(const NativeWindowDesc &window) noexcept
+{
+    using Kind = NativeWindowDesc::Kind;
+    return window.window != 0
+           && ((window.kind == Kind::Win32 && window.instance != 0)
+               || ((window.kind == Kind::Xlib || window.kind == Kind::Wayland)
+                   && window.display != 0));
+}
+
+template<typename Presenter>
+Result<std::unique_ptr<Presenter>>
+PresenterFailure(ErrorCode code, std::string_view operation) noexcept
+{
+    return Result<std::unique_ptr<Presenter>>::Failure(
+        detail::WithOperation({code, {}, {}, {}}, operation));
+}
+
+Result<std::unique_ptr<IPresenter>>
+CreateVulkanPresenter(const PresenterDesc &desc,
+                      std::string_view operation) noexcept
+{
+    const auto fail = [operation](ErrorCode code) {
+        return PresenterFailure<IPresenter>(code, operation);
     };
     const bool win32 = desc.window.kind == NativeWindowDesc::Kind::Win32;
     const bool xlib = desc.window.kind == NativeWindowDesc::Kind::Xlib;
-    const bool wayland = desc.window.kind == NativeWindowDesc::Kind::Wayland;
-    if ((!win32 && !xlib && !wayland) || desc.window.window == 0
-        || (win32 && desc.window.instance == 0)
-        || ((xlib || wayland) && desc.window.display == 0)
-        || desc.device.backend > BackendType::DX12) {
-        return fail(ErrorCode::InvalidArgument);
-    }
-    if (desc.device.backend != BackendType::Auto
-        && desc.device.backend != BackendType::Vulkan) {
-        return fail(ErrorCode::Unsupported);
-    }
 #if VORYX_HAS_WIN32_PRESENTER || VORYX_HAS_XLIB_PRESENTER                      \
     || VORYX_HAS_WAYLAND_PRESENTER
     const auto identity = detail::AllocateDeviceIdentity();
@@ -66,5 +75,54 @@ CreatePresenter(const PresenterDesc &desc) noexcept
 #else
     return fail(ErrorCode::SurfaceIncompatible);
 #endif
+}
+} // namespace
+
+Result<std::unique_ptr<IPresenter>>
+CreatePresenter(const PresenterDesc &desc) noexcept
+{
+    constexpr std::string_view operation = "CreatePresenter";
+    if (!ValidWindow(desc.window) || desc.device.backend > BackendType::DX12) {
+        return PresenterFailure<IPresenter>(ErrorCode::InvalidArgument,
+                                            operation);
+    }
+    if (desc.device.backend != BackendType::Auto
+        && desc.device.backend != BackendType::Vulkan) {
+        return PresenterFailure<IPresenter>(ErrorCode::Unsupported, operation);
+    }
+    return CreateVulkanPresenter(desc, operation);
+}
+
+Result<std::unique_ptr<IFramePresenter>>
+CreateFramePresenter(const PresenterDesc &desc) noexcept
+{
+    constexpr std::string_view operation = "CreateFramePresenter";
+    using FramePresenterPtr = std::unique_ptr<IFramePresenter>;
+    if (!ValidWindow(desc.window)) {
+        return PresenterFailure<IFramePresenter>(ErrorCode::InvalidArgument,
+                                                 operation);
+    }
+    return detail::SelectBackend<FramePresenterPtr>(
+        desc.device.backend, operation,
+        [&](BackendType backend) -> Result<FramePresenterPtr> {
+            if (backend == BackendType::Vulkan) {
+                auto candidate = desc;
+                candidate.device.backend = backend;
+                auto presenter = CreateVulkanPresenter(candidate, operation);
+                if (!presenter) {
+                    return Result<FramePresenterPtr>::Failure(
+                        std::move(presenter).GetError());
+                }
+                return Result<FramePresenterPtr>::Success(
+                    std::move(presenter).Value());
+            }
+            if (backend == BackendType::Null
+                || (backend == BackendType::DX12 && !VORYX_PLATFORM_WINDOWS)) {
+                return PresenterFailure<IFramePresenter>(ErrorCode::Unsupported,
+                                                         operation);
+            }
+            return PresenterFailure<IFramePresenter>(ErrorCode::BackendNotBuilt,
+                                                     operation);
+        });
 }
 } // namespace voryx

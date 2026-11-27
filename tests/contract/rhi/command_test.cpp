@@ -203,7 +203,7 @@ TEST_F(BufferRhiTest, SubmissionRejectsEmptyNullDuplicateAndForeignLists)
     ExpectError(device->Submit({duplicate}), ErrorCode::InvalidArgument);
     const std::array<ICommandList *, 1> empty{nullptr};
     ExpectError(device->Submit({empty}), ErrorCode::InvalidArgument);
-    auto other = Take(CreateDevice({BackendType::Null, {}}));
+    auto other = NewDevice("foreign device");
     ICommandList *pointer = command.get();
     ExpectError(other->Submit({std::span<ICommandList *const>(&pointer, 1)}),
                 ErrorCode::WrongDevice);
@@ -216,7 +216,7 @@ TEST_F(BufferRhiTest, SubmissionTokensRejectOtherDevicesAndDefaultValues)
     Take(command->Begin());
     Take(command->End());
     const auto token = Submit(*command);
-    auto other = Take(CreateDevice({BackendType::Null, {}}));
+    auto other = NewDevice("foreign device");
     ExpectError(other->Wait(token, 0), ErrorCode::WrongDevice);
     ExpectError(device->IsComplete({}), ErrorCode::InvalidHandle);
     Take(device->Wait(token, std::numeric_limits<TimeoutNs>::max()));

@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.25)
+
 function(run_checked)
     execute_process(COMMAND ${ARGV} RESULT_VARIABLE result
         OUTPUT_VARIABLE output ERROR_VARIABLE errors TIMEOUT 90)
@@ -6,44 +8,65 @@ function(run_checked)
     endif()
 endfunction()
 
-set(original "${BINARY_ROOT}/original")
-set(relocated "${BINARY_ROOT}/relocated")
-set(consumer_source "${BINARY_ROOT}/consumer-source")
-set(consumer_build "${BINARY_ROOT}/consumer-build")
+# 每次验收从空目录安装、迁移并配置消费者，缺失文件不会由上次结果补齐。
+file(REAL_PATH "${MAIN_BINARY_ROOT}" main_build)
+file(REAL_PATH "${BINARY_ROOT}" staging_base)
+cmake_path(IS_PREFIX main_build "${staging_base}" NORMALIZE staging_is_child)
+if(NOT staging_is_child OR staging_base STREQUAL main_build)
+    message(FATAL_ERROR "SDK staging must be a child of the main build directory")
+endif()
+string(RANDOM LENGTH 12 ALPHABET "abcdefghijklmnopqrstuvwxyz0123456789" run_id)
+set(run_root "${staging_base}/run-${run_id}")
+if(EXISTS "${run_root}")
+    message(FATAL_ERROR "SDK staging directory already exists: ${run_root}")
+endif()
+set(original "${run_root}/original")
+set(relocated "${run_root}/relocated")
+set(consumer_source "${run_root}/consumer-source")
+set(consumer_build "${run_root}/consumer-build")
 run_checked("${CMAKE_COMMAND}" --install "${MAIN_BINARY_ROOT}"
     --prefix "${original}" --config "${CONFIGURATION}")
 file(MAKE_DIRECTORY "${relocated}" "${consumer_source}")
 file(COPY "${original}/" DESTINATION "${relocated}")
 configure_file("${SOURCE_ROOT}/tests/integration/sdk_consumer/CMakeLists.txt"
     "${consumer_source}/CMakeLists.txt" COPYONLY)
-configure_file("${relocated}/${SDK_DATA_DIR}/Voryx/examples/null_buffers/main.cpp"
-    "${consumer_source}/main.cpp" COPYONLY)
-
+if(EXPECT_NULL)
+    set(buffer_source "${relocated}/${SDK_DATA_DIR}/Voryx/examples/null_buffers/main.cpp")
+else()
+    # 真实后端也复用同一字节回归，安装包可以完全关闭 Null。
+    set(buffer_source "${SOURCE_ROOT}/samples/null_buffers/main.cpp")
+endif()
+configure_file("${buffer_source}" "${consumer_source}/main.cpp" COPYONLY)
 configure_file("${SOURCE_ROOT}/tests/integration/sdk_consumer/pipeline.cpp"
     "${consumer_source}/pipeline.cpp" COPYONLY)
 configure_file("${SOURCE_ROOT}/assets/shaders/generated/triangle_spirv.hpp"
     "${consumer_source}/triangle_spirv.hpp" COPYONLY)
 
-# 对外 SDK 只含公共头；内部工厂与后端实现不得泄露。
+# 对外 SDK 只含公共头，内部工厂与后端实现不得泄露。
 if(EXISTS "${relocated}/include/null_factory.hpp"
     OR EXISTS "${relocated}/include/voryx/backends")
     message(FATAL_ERROR "Private backend headers leaked into the SDK")
 endif()
+set(package_dir "${relocated}/${SDK_LIB_DIR}/cmake/Voryx")
+if(NOT EXISTS "${package_dir}/VoryxConfig.cmake")
+    message(FATAL_ERROR "Installed package is missing VoryxConfig.cmake")
+endif()
 run_checked("${CMAKE_COMMAND}" -S "${consumer_source}" -B "${consumer_build}"
-    -G Ninja "-DVORYX_EXPECTED_PREFIX=${relocated}"
+    -G Ninja "-DVORYX_EXPECTED_PREFIX=${relocated}" "-DVoryx_DIR=${package_dir}"
+    "-DEXPECT_NULL=${EXPECT_NULL}" "-DEXPECT_OPENGL=${EXPECT_OPENGL}"
+    "-DEXPECT_VULKAN=${EXPECT_VULKAN}"
     "-DCMAKE_CXX_COMPILER=${TEST_CXX_COMPILER}"
     "-DCMAKE_BUILD_TYPE=${CONFIGURATION}" "-DCMAKE_MAKE_PROGRAM=${NINJA}")
 run_checked("${CMAKE_COMMAND}" --build "${consumer_build}" --parallel 2)
+set(suffix "")
 if(CMAKE_HOST_WIN32)
-    set(consumer "${consumer_build}/sdk_consumer.exe")
-else()
-    set(consumer "${consumer_build}/sdk_consumer")
+    set(suffix ".exe")
 endif()
-run_checked("${consumer}")
-if(CMAKE_HOST_WIN32)
-    run_checked("${consumer_build}/pipeline_consumer.exe")
-else()
-    run_checked("${consumer_build}/pipeline_consumer")
+set(consumer "${consumer_build}/sdk_consumer${suffix}")
+set(pipeline "${consumer_build}/pipeline_consumer${suffix}")
+if(EXPECT_NULL)
+    run_checked("${consumer}")
+    run_checked("${pipeline}")
 endif()
 if(RUN_OPENGL)
     set(opengl_arguments --opengl)
@@ -58,17 +81,13 @@ if(RUN_GPU)
         list(APPEND arguments --allow-software)
     endif()
     run_checked("${consumer}" ${arguments})
-    if(CMAKE_HOST_WIN32)
-        run_checked("${consumer_build}/pipeline_consumer.exe" ${arguments})
-    else()
-        run_checked("${consumer_build}/pipeline_consumer" ${arguments})
-    endif()
+    run_checked("${pipeline}" ${arguments})
 endif()
 function(run_installed_example example)
     set(clear_source "${relocated}/${SDK_DATA_DIR}/Voryx/examples/${example}")
-    set(clear_build "${BINARY_ROOT}/${example}-build")
+    set(clear_build "${run_root}/${example}-build")
     run_checked("${CMAKE_COMMAND}" -S "${clear_source}" -B "${clear_build}"
-        -G Ninja "-DCMAKE_PREFIX_PATH=${relocated}"
+        -G Ninja "-DVoryx_DIR=${package_dir}"
         "-DCMAKE_CXX_COMPILER=${TEST_CXX_COMPILER}"
         "-DCMAKE_BUILD_TYPE=${CONFIGURATION}" "-DCMAKE_MAKE_PROGRAM=${NINJA}")
     run_checked("${CMAKE_COMMAND}" --build "${clear_build}" --parallel 2)
@@ -104,3 +123,11 @@ if(RUN_WAYLAND_CLEAR)
         run_installed_example(wayland_clear --verify)
     endif()
 endif()
+
+# 仅清理本次成功运行的目录，失败时保留现场。
+file(REAL_PATH "${run_root}" resolved_run)
+cmake_path(IS_PREFIX staging_base "${resolved_run}" NORMALIZE run_is_child)
+if(NOT run_is_child OR NOT resolved_run STREQUAL run_root)
+    message(FATAL_ERROR "Refusing to delete unexpected SDK staging path: ${resolved_run}")
+endif()
+file(REMOVE_RECURSE "${resolved_run}")

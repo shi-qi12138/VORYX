@@ -50,7 +50,7 @@ if (!set) {
 | SetBindingSet | 仅可在活动 Pass 内、SetPipeline 后调用，布局句柄必须为创建当前管线时指定的同一个句柄。每次 SetPipeline 清除已绑定的集合，BeginRenderPass 清除全部绑定。 |
 | Draw / DrawIndexed | 如果管线声明了绑定布局，每次绘制前必须有已绑定的集合。提交按整批命令顺序校验 ConstantRead 和 ShaderRead。 |
 
-能力查询还提供 maxSamplers、maxBindingLayouts 与 maxBindingSets。采样纹理与附件共享 maxTextures 数量上限。当前提供上传即进入 ShaderRead 的静态采样纹理，以及上一批的颜色/深度附件。 [Vulkan 描述符与对齐](https://docs.vulkan.org/spec/latest/chapters/descriptorsets.html)
+能力查询还提供 maxSamplers、maxBindingLayouts 与 maxBindingSets。采样器或绑定布局容量为零时，合法的创建请求返回 `Unsupported`。支持该能力并用尽容量时返回 `OutOfMemory`。采样纹理与附件共享 maxTextures 数量上限。当前提供上传即进入 ShaderRead 的静态采样纹理，以及上一批的颜色/深度附件。 [Vulkan 描述符与对齐](https://docs.vulkan.org/spec/latest/chapters/descriptorsets.html)
 
 ## Shader 契约
 

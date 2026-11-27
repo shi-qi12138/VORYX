@@ -1,6 +1,6 @@
 # VORYX C++ 框架设计
 
-状态为 0.1.0-draft.24。Core、缓冲 RHI、Null/Vulkan 缓冲与低层工厂已有实现，Win32、X11 与 Wayland 清屏和固定布局彩色与纹理三角形及显式资源绑定可用，设备级离屏绘制支持纹理、常量缓冲、索引和深度组合。Vulkan 设备命令支持离屏异步与窗口双帧提交，共享层管理命令完成与资源回收。Vulkan Presenter 提供显式限时关闭。OpenGL 支持离屏颜色附件、GLSL 绘制与同步读回。完整 Runtime 和高层模块继续推进。文档索引见 [文档中心](README.md)，可用调用见 [缓冲 RHI](rhi-buffer-api.md)，完整目标见 [接口契约](api-reference.md)。
+状态为 0.1.0-draft.25。Core、缓冲 RHI、Null/Vulkan 缓冲与低层工厂已有实现，Win32、X11 与 Wayland 清屏和固定布局彩色与纹理三角形及显式资源绑定可用，设备级离屏绘制支持纹理、常量缓冲、索引和深度组合。Vulkan 设备命令支持离屏异步与窗口双帧提交，共享层管理命令完成与资源回收。Vulkan Presenter 提供显式限时关闭。OpenGL 支持离屏颜色附件、GLSL 绘制与同步读回。完整 Runtime 和高层模块继续推进。文档索引见 [文档中心](README.md)，可用调用见 [缓冲 RHI](rhi-buffer-api.md)，完整目标见 [接口契约](api-reference.md)。
 
 ## 1. 范围与设计取舍
 
@@ -82,7 +82,7 @@ Presenter 与设备命令共用同一 Vulkan Context。后端交换链拥有原�
 
 ### 4.2 创建与后端选择
 
-Runtime 是组装模块。当前公开 CreateDevice(DeviceDesc) 提供 Null/Vulkan 无窗口设备，独立拥有 IDevice；未来窗口 Runtime::Create 再组装 Surface/Swapchain，不把窗口强加给无窗口调用者。
+Runtime 是组装模块。当前公开 CreateDevice(DeviceDesc) 提供 Null/Vulkan/OpenGL 无窗口设备，独立拥有 IDevice；未来窗口 Runtime::Create 再组装 Surface/Swapchain，不把窗口强加给无窗口调用者。
 
 内部 Backend Registry 由组装层显式填充，收录本次构建实际启用的后端工厂。不使用静态对象构造时自动注册，避免初始化顺序和静态链接裁剪问题。
 
@@ -90,7 +90,7 @@ Runtime 是组装模块。当前公开 CreateDevice(DeviceDesc) 提供 Null/Vulk
 
 ### 4.3 窗口与可嵌入性
 
-已实现的 CreatePresenter 由 Runtime 选择后端。平台值描述和 RHI 呈现接口独立于图形 SDK。Vulkan 通用呈现实现持有设备、交换链与同步对象，Win32、Xlib 与 Wayland 各有私有 Surface 适配器。Wayland 的物理像素尺寸由宿主提供。此入口提供清屏和三角形阶段的窄接口，与无窗口缓冲设备独立。实际契约见 [Win32 清屏指南](win32-clear.md) 、[X11 清屏指南](xlib-clear.md) 和 [Wayland 清屏指南](wayland-clear.md)。
+`CreateFramePresenter` 由 Runtime 按可用的窗口后端选择并返回 `IFramePresenter`。通用接口只负责窗口图像、提交令牌和呈现生命周期，应用通过借用的设备录制绘制。旧 `CreatePresenter` 提供派生的 `IPresenter`，保留 Vulkan 固定布局示例。平台值描述和 RHI 呈现接口独立于图形 SDK。Vulkan 通用呈现实现持有设备、交换链与同步对象，Win32、Xlib 与 Wayland 各有私有 Surface 适配器。Wayland 的物理像素尺寸由宿主提供。此入口提供清屏和三角形阶段的窄接口，与无窗口缓冲设备独立。实际契约见 [Win32 清屏指南](win32-clear.md) 、[X11 清屏指南](xlib-clear.md) 和 [Wayland 清屏指南](wayland-clear.md)。
 
 宿主拥有窗口和主循环。Platform 提供带平台标签的原生窗口描述，后端通过该边界创建 Surface；RHI 通用描述不包含 HWND、VkSurfaceKHR 等平台或图形 API 类型。
 

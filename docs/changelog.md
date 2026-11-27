@@ -1,5 +1,11 @@
 # 文档与接口变更记录
 
+## 0.1.0-draft.25 — 2026-11-27
+
+- 增加 `CreateFramePresenter` 与 `IFramePresenter`，保留原有 Vulkan 示例入口。帧获取与旧交换链同步共用等待预算，超时保留待完成内容。使用同版头文件和库重新编译宿主。 [窗口帧接口](window-frame-api.md)
+- 离屏设备 `Auto` 实施平台候选顺序。采样器或绑定布局能力为零时返回 `Unsupported`。 [设备工厂](rhi-buffer-api.md) · [资源绑定](rhi-binding-api.md)
+- 关闭 Null 后仍注册后端契约与安装消费测试，安装验证逐次使用新目录。 [SDK 接入](sdk-integration.md)
+
 ## 0.1.0-draft.24 — 2026-11-27
 
 - `GraphicsPipelineDesc` 增加 GLSL 源码阶段对，OpenGL 可创建不透明 RGBA8 绘制管线，Vulkan 继续接受 SPIR-V。升级时使用同一次构建的头文件与库重编译应用。 [管线接口](rhi-pipeline-api.md)

@@ -3,13 +3,19 @@ project(VoryxInstalledConsumer LANGUAGES CXX)
 
 find_package(Voryx 0.1.0 EXACT CONFIG REQUIRED COMPONENTS core rhi_api runtime
     PATHS "${VORYX_EXPECTED_PREFIX}" NO_DEFAULT_PATH)
-if(NOT Voryx_WITH_NULL)
-    message(FATAL_ERROR "This consumer test requires the Null validation backend")
-endif()
+foreach(backend NULL OPENGL VULKAN)
+    if((EXPECT_${backend} AND NOT Voryx_WITH_${backend})
+        OR (NOT EXPECT_${backend} AND Voryx_WITH_${backend}))
+        message(FATAL_ERROR "Installed package reports unexpected support for ${backend}")
+    endif()
+endforeach()
 
 # 导入目标必须指向迁移后的安装目录，不能依赖原始构建或暂存路径。
 string(TOUPPER "${CMAKE_BUILD_TYPE}" configuration)
-set(implementation_targets Voryx::core Voryx::runtime Voryx::detail_null Voryx::detail_rhi)
+set(implementation_targets Voryx::core Voryx::runtime Voryx::detail_rhi)
+if(Voryx_WITH_NULL)
+    list(APPEND implementation_targets Voryx::detail_null)
+endif()
 if(Voryx_WITH_VULKAN)
     list(APPEND implementation_targets Voryx::detail_vulkan)
 endif()

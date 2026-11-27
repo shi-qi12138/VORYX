@@ -1,5 +1,6 @@
 #include "buffer_backend.hpp"
 #include "buffer_device.hpp"
+#include "vulkan_frame_wait.hpp"
 
 #include <array>
 #include <limits>
@@ -137,6 +138,13 @@ public:
         }
     }
 
+    Result<std::unique_ptr<BackendSubmission>>
+    EnqueueFrame(std::span<const BackendOperation> operations,
+                 TextureStorage &) noexcept override
+    {
+        return Enqueue(operations);
+    }
+
 private:
     CompletionGate &gate;
 };
@@ -225,5 +233,84 @@ TEST(AsyncStateTest, ShutdownRetainsPendingWorkAfterTimeoutAndAllowsRetry)
     EXPECT_TRUE(Take(device->IsComplete(token)));
     closing.FinishShutdown();
     ExpectError(device->Wait(token, 0), ErrorCode::InvalidState);
+}
+TEST(AsyncStateTest, FrameRetirementKeepsTheSubmissionOnTimeout)
+{
+    CompletionGate gate;
+    DeviceCapabilities caps{};
+    caps.maxCommandsPerList = 8;
+    caps.maxCommandListsPerSubmit = 1;
+    caps.maxPendingSubmissions = 1;
+    caps.maxPendingWindowFrames = 1;
+    auto device = Take(CreateBufferDevice(
+        1003, {}, caps, std::make_unique<ControlledBackend>(gate)));
+    auto &frameDevice = static_cast<BufferDevice &>(*device);
+    const auto frame = Take(frameDevice.PublishFrame(
+        {4, 4}, Format::RGBA8_UNorm, std::make_unique<TextureStorage>()));
+    auto command = Take(device->CreateCommandList());
+    Take(command->Begin());
+    const std::array toColor{TextureBarrier{frame.color, TextureUse::Present,
+                                            TextureUse::ColorAttachment}};
+    const std::array toPresent{TextureBarrier{
+        frame.color, TextureUse::ColorAttachment, TextureUse::Present}};
+    Take(command->Barrier(toColor));
+    Take(command->BeginRenderPass({frame.color, {0, 0, 0, 1}, {}, 1}));
+    Take(command->EndRenderPass());
+    Take(command->Barrier(toPresent));
+    Take(command->End());
+    const std::array commands{command.get()};
+    const auto submit =
+        Take(device->Submit({commands, frame.token, SubmitMode::Async}));
+    frameDevice.ConsumeFrame();
+
+    ExpectError(frameDevice.WaitForFrameSubmissions(0), ErrorCode::Timeout);
+    EXPECT_EQ(gate.lastTimeout, 0u);
+    EXPECT_EQ(gate.retired, 0u);
+    EXPECT_FALSE(Take(device->IsComplete(submit)));
+    gate.completed = gate.accepted;
+    Take(frameDevice.WaitForFrameSubmissions(0));
+    EXPECT_EQ(gate.retired, 1u);
+    EXPECT_TRUE(Take(device->IsComplete(submit)));
+}
+
+TEST(AsyncStateTest, ImageFenceRetryDoesNotAcquireAnotherImage)
+{
+    using namespace vulkan_backend;
+    struct FencePending
+    {
+    };
+    bool ready = false;
+    unsigned acquires = 0;
+    unsigned slotWaits = 0;
+    unsigned imageWaits = 0;
+    std::optional<std::uint32_t> held;
+    const FrameWaitBudget zero(0);
+    const auto run = [&]() {
+        return AcquireImageWithinBudget(
+            held, zero,
+            [&](TimeoutNs remaining) {
+                EXPECT_EQ(remaining, 0u);
+                ++slotWaits;
+            },
+            [&](TimeoutNs remaining) {
+                EXPECT_EQ(remaining, 0u);
+                ++acquires;
+                return 2u;
+            },
+            [&](TimeoutNs remaining) {
+                EXPECT_EQ(remaining, 0u);
+                ++imageWaits;
+                if (!ready) {
+                    throw FencePending{};
+                }
+            });
+    };
+    EXPECT_THROW(run(), FencePending);
+    ASSERT_EQ(held, 2u);
+    ready = true;
+    EXPECT_EQ(run(), 2u);
+    EXPECT_EQ(acquires, 1u);
+    EXPECT_EQ(slotWaits, 1u);
+    EXPECT_EQ(imageWaits, 2u);
 }
 } // namespace voryx::test

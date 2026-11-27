@@ -240,6 +240,23 @@ int main(int argc, char **argv)
                             ? Verify(*presenter, window.handle)
                             : RunLoop(*presenter, drawMode != DrawMode::Clear);
     presenter.reset();
+    if (passed && verify) {
+        // 在同一宿主窗口验证只依赖通用帧接口的接入。
+        desc.device.backend = voryx::BackendType::Auto;
+        auto frame = voryx::CreateFramePresenter(desc);
+        if (!frame) {
+            PrintError(frame.GetError());
+            return 1;
+        }
+        RECT client{};
+        if (!GetClientRect(window.handle, &client)
+            || !voryx::sample::VerifyResizedAsyncFrame(
+                *frame.Value(), {static_cast<std::uint32_t>(client.right),
+                                 static_cast<std::uint32_t>(client.bottom)})
+            || !voryx::sample::VerifyWindowShutdown(*frame.Value())) {
+            return 1;
+        }
+    }
     if (!passed || errors.load() != 0) {
         std::fputs("Win32 clear verification failed.\n", stderr);
         return 1;

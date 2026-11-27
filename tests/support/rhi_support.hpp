@@ -34,9 +34,9 @@ void ExpectError(Result<T> result, ErrorCode expected)
 class BufferRhiTest : public testing::Test
 {
 protected:
-    void SetUp() override
+    std::unique_ptr<IDevice> NewDevice(std::string_view name)
     {
-        DeviceDesc desc{BackendType::Null, "contract test"};
+        DeviceDesc desc{BackendType::Null, name};
 #if VORYX_TEST_VULKAN
         desc.backend = BackendType::Vulkan;
         desc.enableValidation = true;
@@ -54,7 +54,12 @@ protected:
         desc.backend = BackendType::OpenGL;
         desc.allowSoftwareAdapter = VORYX_TEST_SOFTWARE != 0;
 #endif
-        device = Take(CreateDevice(desc));
+        return Take(CreateDevice(desc));
+    }
+
+    void SetUp() override
+    {
+        device = NewDevice("contract test");
 #if VORYX_TEST_VULKAN
         ASSERT_TRUE(device->GetInfo().validationEnabled);
         std::printf("Vulkan device: %s; software=%s\n",

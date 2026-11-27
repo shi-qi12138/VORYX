@@ -25,8 +25,7 @@ GraphicsPipelineDesc Description()
 } // namespace
 TEST_F(BufferRhiTest, PipelineOwnsInputsAndRejectsStaleAndForeignHandles)
 {
-    auto foreign =
-        Take(CreateDevice({BackendType::Null, "pipeline validation"}));
+    auto foreign = NewDevice("foreign device");
     auto words =
         std::vector<std::uint32_t>(std::begin(sample_data::triangleVertexSpirv),
                                    std::end(sample_data::triangleVertexSpirv));

@@ -91,7 +91,7 @@ TEST_F(BufferRhiTest,
                      {}}),
                 ErrorCode::Unsupported);
     const auto first = Color(*device);
-    auto other = Take(CreateDevice({BackendType::Null, "foreign texture"}));
+    auto other = NewDevice("foreign device");
     ExpectError(other->Destroy(first), ErrorCode::WrongDevice);
     std::thread worker([&]() {
         ExpectError(device->Destroy(first), ErrorCode::WrongThread);

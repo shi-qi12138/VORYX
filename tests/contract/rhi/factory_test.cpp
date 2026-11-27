@@ -9,13 +9,19 @@ namespace voryx::test
 {
 TEST(DeviceFactoryTest, AutoNeverSelectsNull)
 {
-#if VORYX_TEST_HAS_VULKAN
     const auto automatic = CreateDevice({});
     if (automatic) {
-        EXPECT_EQ(automatic.Value()->GetInfo().backend, BackendType::Vulkan);
+        EXPECT_NE(automatic.Value()->GetInfo().backend, BackendType::Null);
     }
-#else
-    ExpectError(CreateDevice({}), ErrorCode::BackendNotBuilt);
+#if !VORYX_TEST_HAS_VULKAN && !VORYX_TEST_HAS_OPENGL
+    ASSERT_FALSE(automatic);
+    EXPECT_EQ(automatic.GetError().errorCode, ErrorCode::BackendNotBuilt);
+    EXPECT_NE(automatic.GetError().message.find("Vulkan=BackendNotBuilt"),
+              std::string::npos);
+    EXPECT_NE(automatic.GetError().message.find("OpenGL=BackendNotBuilt"),
+              std::string::npos);
+#endif
+#if !VORYX_TEST_HAS_VULKAN
     ExpectError(CreateDevice({BackendType::Vulkan, {}}),
                 ErrorCode::BackendNotBuilt);
 #endif

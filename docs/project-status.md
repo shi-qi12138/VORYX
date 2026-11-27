@@ -1,6 +1,6 @@
 # 项目开发进度
 
-更新日期为 2026-11-27，当前契约版本为 `0.1.0-draft.24`。
+更新日期为 2026-11-27，当前契约版本为 `0.1.0-draft.25`。
 
 ## 当前阶段
 
@@ -25,6 +25,7 @@ M2 的 Vulkan 已接入 Win32、X11 和原生 Wayland，原生 Linux 硬件验�
 | 设备资源绑定 | 不可变采样纹理与采样器、常量缓冲范围、显式布局及集合、Pass 中切换资源 | [设备绑定](rhi-binding-api.md) |
 | 设备窗口帧 | 借用窗口设备和颜色图像，录制纹理索引绘制，支持同步提交、双帧异步提交、呈现与取消 | [窗口帧](window-frame-api.md) |
 | Vulkan 离屏异步 | 连续提交、fence 查询与等待、资源延迟回收、SDK 纹理绘制读回 | [离屏异步提交](rhi-async-submit.md) |
+| 通用窗口帧接口 | `IFramePresenter` 与 `CreateFramePresenter`，Vulkan 交付通用获取、呈现、取消及关闭入口 | [窗口帧](window-frame-api.md) |
 | 窗口限时关闭 | 停止新工作、按预算等待、超时重试、未呈现帧回收 | [窗口关闭](window-frame-api.md#显式限时关闭) |
 | OpenGL 无窗口缓冲 | WGL 和 EGL 私有上下文、原生缓冲和同步复制、迁移 SDK 接入 | [OpenGL 后端](opengl-backend.md) |
 | OpenGL 离屏清屏 | RGBA8 颜色附件、同步提交、整图像素读回和独立安装示例 | [清屏与读回](opengl-backend.md#离屏清屏和读回) |
@@ -48,15 +49,18 @@ M2 的 Vulkan 已接入 Win32、X11 和原生 Wayland，原生 Linux 硬件验�
 
 ## 最新验证快照
 
-本轮验证 `0.1.0-draft.24` 的 OpenGL 离屏三角形与独立 SDK 接入。Windows 硬件和 WSL 软件 OpenGL Debug 各通过 106 项，Windows Vulkan Debug 回归通过 120 项。 [环境报告第 26 节](environment.md#26-opengl-离屏三角形证据)
+本轮验证 `0.1.0-draft.25` 的后端选择、资源错误码、通用窗口入口、帧等待与独立 SDK 接入。 [环境报告第 27 节](environment.md#27-架构审查修复验证)
 
-| 构建配置 | 执行环境 | 通过 | 失败 | 跳过 |
-| --- | --- | --- | --- | --- |
-| `windows-opengl-debug` | Windows WGL 硬件 OpenGL | 106/106 | 0 | 0 |
-| `linux-opengl-software-debug` | WSL 无窗口 EGL 软件 OpenGL | 106/106 | 0 | 0 |
-| `windows-vulkan-debug` | Windows 硬件 Vulkan、Win32 | 120/120 | 0 | 0 |
+| 构建配置 | 执行环境 | 已验证通过 |
+| --- | --- | --- |
+| `windows-opengl-debug` | Windows WGL 硬件 OpenGL | 110/110 |
+| `linux-opengl-software-debug` | WSL 无窗口 EGL 软件 OpenGL | 110/110 |
+| `windows-vulkan-debug` | Windows 硬件 Vulkan、Win32 | 122/122 |
+| `linux-vulkan-wayland-software-debug` | WSLg 软件 Vulkan、原生 Wayland | 122/122 |
+| Windows OpenGL Debug 关闭 Null | Windows WGL 硬件 OpenGL | 65/65 |
+| `linux-vulkan-x11-software-debug` | WSLg 软件 Vulkan、X11 | 4/4 窗口与 SDK 专项 |
 
-原生 Linux GPU、OpenGL 窗口呈现和 DX12 后端仍待验收。历史 Linux Vulkan、Release 和 CPU/Null 结果见环境报告，远端执行记录见持续集成指南。 [历次验收](environment.md#23-ci-配置与本地-release-验收证据) · [持续集成](ci.md)
+原生 Linux GPU、OpenGL 窗口呈现和 DX12 后端仍待验收。历史 Release 和 CPU/Null 结果见环境报告。 [历次验收](environment.md#23-ci-配置与本地-release-验收证据)
 
 ## 后续开发顺序
 
